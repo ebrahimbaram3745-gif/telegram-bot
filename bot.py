@@ -711,7 +711,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = """
 سلام همکار گرامی 😃
 
-🟣 هر گیگ 250 تومان
+🟣 هر گیگ 190 تومان
 
 ID : @mak_11q
 
