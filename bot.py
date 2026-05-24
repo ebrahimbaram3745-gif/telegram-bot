@@ -13,7 +13,8 @@ from telegram.ext import (
     filters
 )
 
-TOKEN = "8806689549:AAH4sJOw1A2aQDcllWG21qtgNxfOKPy70TY"
+import os
+TOKEN = os.getenv("BOT_TOKEN")
 
 CHANNEL_USERNAME = "Pokemon_VPN"
 
