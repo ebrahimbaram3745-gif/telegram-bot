@@ -23,6 +23,7 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup
+    ButtonStyle
 )
 
 from telegram.ext import (
