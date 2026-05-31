@@ -1051,6 +1051,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if user_id not in used_gifts:
             used_gifts[user_id] = []
+            save_data("gifts.json", used_gifts)
 
         if code in used_gifts[user_id]:
 
@@ -1063,6 +1064,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if code == "mam4di":
 
             used_gifts[user_id].append(code)
+            save_data("gifts.json", used_gifts)
 
             pending_gifts[user_id] = "1 گیگ"
 
@@ -1115,6 +1117,7 @@ mam4di
         elif code == "mam4di_1k":
 
             used_gifts[user_id].append(code)
+            save_data("gifts.json", used_gifts)
 
             pending_gifts[user_id] = "2 گیگ"
 
