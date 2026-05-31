@@ -1231,8 +1231,82 @@ mam4di_1k
 
         return
 
-    # پیام همگانی
-    if user_id in broadcast_wait:
+   # دریافت آیدی کاربر
+if user_id in find_user_wait:
+
+    try:
+        target_user = int(update.message.text)
+
+    except:
+
+        await update.message.reply_text(
+            "❌ آیدی معتبر نیست"
+        )
+
+        return
+
+    try:
+
+        with open("users.txt", "r", encoding="utf-8") as f:
+
+            users = f.read().splitlines()
+
+        if str(target_user) not in users:
+
+            await update.message.reply_text(
+                "❌ همچین کاربری در ربات وجود ندارد"
+            )
+
+            del find_user_wait[user_id]
+
+            return
+
+    except:
+
+        await update.message.reply_text(
+            "❌ خطا در بررسی کاربران"
+        )
+
+        del find_user_wait[user_id]
+
+        return
+
+    send_found_user_wait[user_id] = target_user
+
+    del find_user_wait[user_id]
+
+    await update.message.reply_text(
+        "✉️ پیام خود را ارسال کنید"
+    )
+
+    return
+
+
+# ارسال پیام به کاربر پیدا شده
+if user_id in send_found_user_wait:
+
+    target_user = send_found_user_wait[user_id]
+
+    try:
+
+        await context.bot.send_message(
+            target_user,
+            update.message.text
+        )
+
+        await update.message.reply_text(
+            "✅ پیام شما ارسال شد"
+        )
+
+    except:
+
+        await update.message.reply_text(
+            "❌ ارسال پیام ناموفق بود"
+        )
+
+    del send_found_user_wait[user_id]
+
+    return
 
         try:
 
