@@ -1173,7 +1173,8 @@ mam4di_1k
         "❌ کد هدیه نامعتبر است"
     )
 
-    del gift_wait[user_id]
+    if user_id in gift_wait:
+        del gift_wait[user_id]
 
     return
 
