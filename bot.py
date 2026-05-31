@@ -825,16 +825,33 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 users = f.read().splitlines()
 
-            for uid in users[:20]:
+            for uid in users:
 
-                users_buttons.append([
+                try:
 
-                    InlineKeyboardButton(
-                        f"👤 {uid}",
-                        callback_data=f"pm_{uid}"
-                    )
+                    chat = await context.bot.get_chat(int(uid))
 
-                ])
+                    username = chat.username if chat.username else "ندارد"
+
+                    users_buttons.append([
+
+                        InlineKeyboardButton(
+                            f"{username} | {uid}",
+                            callback_data=f"pm_{uid}"
+                        )
+
+                    ])
+
+                except:
+
+                    users_buttons.append([
+
+                        InlineKeyboardButton(
+                            f"کاربر | {uid}",
+                            callback_data=f"pm_{uid}"
+                        )
+
+                    ])
 
         except:
 
