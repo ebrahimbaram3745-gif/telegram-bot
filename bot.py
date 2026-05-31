@@ -214,7 +214,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     if user_id not in user_wallets:
-        user_wallets[user_id] = 0
+    user_wallets[user_id] = 0
+    save_data("balances.json", user_wallets)
 
     text = """
 ✨ به Pokémon VPN خوش اومدی
@@ -240,7 +241,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
 
     if user_id not in user_wallets:
-        user_wallets[user_id] = 0
+    user_wallets[user_id] = 0
+    save_data("balances.json", user_wallets)
 
     # تایید رسید
     if data.startswith("accept_"):
@@ -254,6 +256,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             amount = info["amount"]
 
             user_wallets[target_user] += amount
+            save_data("balances.json", user_wallets)
 
             await context.bot.send_message(
                 target_user,
@@ -637,8 +640,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
-        user_wallets[user_id] -= price
-
+        user_wallets[user_id] -= price 
+        save_data("balances.json", user_wallets)
+        
         pending_config_user[user_id] = user_id
 
         await context.bot.send_message(
@@ -701,6 +705,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         user_wallets[user_id] -= price
+        save_data("balances.json", user_wallets)
 
         pending_config_user[user_id] = user_id
 
