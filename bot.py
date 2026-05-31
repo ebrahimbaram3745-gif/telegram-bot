@@ -1,5 +1,5 @@
+import so
 import json
-import os
 
 def load_data(filename):
     if not os.path.exists(filename):
