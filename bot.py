@@ -141,6 +141,12 @@ def home_keys():
             )
         ],
 
+        [
+            InlineKeyboardButton(
+                "📢 ارسال پیام همگانی",
+                callback_data="broadcast"
+            )
+        ]
     ])
 
 
