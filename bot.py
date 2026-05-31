@@ -54,6 +54,8 @@ user_wallets = {}
 gift_wait = {}
 used_gifts = {}
 pending_gifts = {}
+waiting_config = {}
+broadcast_wait = {}
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
@@ -136,6 +138,13 @@ def home_keys():
             InlineKeyboardButton(
                 "📋 تعرفه قیمت‌ها",
                 callback_data="prices"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📢 ارسال پیام همگانی",
+                callback_data="broadcast"
             )
         ]
     ])
@@ -759,9 +768,15 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         volume = pending_gifts.get(target_id, "نامشخص")
 
+        waiting_config[query.from_user.id] = target_id
+
         await context.bot.send_message(
             chat_id=target_id,
             text="✅ کد هدیه شما با موفقیت تایید شد\n⏳ در حال بررسی است و منتظر کانفینگ باشید"
+        )
+
+        await query.message.reply_text(
+            "📤 کانفینگ کاربر را ارسال کنید"
         )
 
         await query.answer("تایید شد")
@@ -777,6 +792,32 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await query.answer("رد شد")
+
+
+
+    # پیام همگانی
+    elif data == "broadcast":
+
+        if user_id != ADMIN_ID:
+
+            return
+
+        broadcast_wait[user_id] = True
+
+        keyboard = InlineKeyboardMarkup([
+
+            [
+                InlineKeyboardButton(
+                    "🔙 بازگشت",
+                    callback_data="home"
+                )
+            ]
+        ])
+
+        await query.message.edit_text(
+            "📢 پیام خود را برای کاربران ارسال کنید",
+            reply_markup=keyboard
+        )
 
 
     # تعرفه
@@ -1009,6 +1050,64 @@ mam4di_1k
             )
 
             return
+
+
+
+    # ارسال کانفیگ توسط مدیر
+    if user_id in waiting_config:
+
+        target_user = waiting_config[user_id]
+
+        await context.bot.send_message(
+            chat_id=target_user,
+            text=update.message.text
+        )
+
+        await update.message.reply_text(
+            "✅ کانفینگ با موفقیت ارسال شد"
+        )
+
+        del waiting_config[user_id]
+
+        return
+
+    # پیام همگانی
+    if user_id in broadcast_wait:
+
+        try:
+
+            with open("users.txt", "r", encoding="utf-8") as f:
+
+                users = f.readlines()
+
+            for user in users:
+
+                try:
+
+                    uid = int(user.strip())
+
+                    await context.bot.send_message(
+                        chat_id=uid,
+                        text=update.message.text
+                    )
+
+                except:
+
+                    pass
+
+            await update.message.reply_text(
+                "✅ پیام شما با موفقیت برای کاربران ارسال شد"
+            )
+
+        except:
+
+            await update.message.reply_text(
+                "❌ لیست کاربران پیدا نشد"
+            )
+
+        del broadcast_wait[user_id]
+
+        return
 
 
     # مبلغ کیف پول
