@@ -70,8 +70,6 @@ pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
-find_user_wait = {}
-send_found_user_wait = {}
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
@@ -877,20 +875,11 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             pass
 
-                users_buttons.append([
+        users_buttons.append([
 
             InlineKeyboardButton(
                 "📢 ارسال پیام به کل کاربران",
                 callback_data="send_all_users"
-            )
-
-        ])
-
-        users_buttons.append([
-
-            InlineKeyboardButton(
-                "🔍 جستجوی کاربر",
-                callback_data="find_user"
             )
 
         ])
@@ -911,9 +900,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    elif data == "find_user":
+    elif data == "send_all_users":
 
-        find_user_wait[user_id] = True
+        broadcast_wait[user_id] = True
 
         keyboard = InlineKeyboardMarkup([
 
@@ -923,29 +912,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     callback_data="broadcast"
                 )
             ]
-
         ])
-
-        await query.message.edit_text(
-            "🆔 آیدی عددی کاربر را ارسال کنید",
-            reply_markup=keyboard
-        )
-
-        return
-
-elif data == "send_all_users":
-
-    broadcast_wait[user_id] = True
-
-    keyboard = InlineKeyboardMarkup([
-
-        [
-            InlineKeyboardButton(
-                "🔙 بازگشت",
-                callback_data="broadcast"
-            )
-        ]
-    ])
 
         await query.message.edit_text(
             "📢 پیام خود را برای کل کاربران ارسال کنید",
@@ -1231,82 +1198,8 @@ mam4di_1k
 
         return
 
-   # دریافت آیدی کاربر
-if user_id in find_user_wait:
-
-    try:
-        target_user = int(update.message.text)
-
-    except:
-
-        await update.message.reply_text(
-            "❌ آیدی معتبر نیست"
-        )
-
-        return
-
-    try:
-
-        with open("users.txt", "r", encoding="utf-8") as f:
-
-            users = f.read().splitlines()
-
-        if str(target_user) not in users:
-
-            await update.message.reply_text(
-                "❌ همچین کاربری در ربات وجود ندارد"
-            )
-
-            del find_user_wait[user_id]
-
-            return
-
-    except:
-
-        await update.message.reply_text(
-            "❌ خطا در بررسی کاربران"
-        )
-
-        del find_user_wait[user_id]
-
-        return
-
-    send_found_user_wait[user_id] = target_user
-
-    del find_user_wait[user_id]
-
-    await update.message.reply_text(
-        "✉️ پیام خود را ارسال کنید"
-    )
-
-    return
-
-
-# ارسال پیام به کاربر پیدا شده
-if user_id in send_found_user_wait:
-
-    target_user = send_found_user_wait[user_id]
-
-    try:
-
-        await context.bot.send_message(
-            target_user,
-            update.message.text
-        )
-
-        await update.message.reply_text(
-            "✅ پیام شما ارسال شد"
-        )
-
-    except:
-
-        await update.message.reply_text(
-            "❌ ارسال پیام ناموفق بود"
-        )
-
-    del send_found_user_wait[user_id]
-
-    return
+    # پیام همگانی
+    if user_id in broadcast_wait:
 
         try:
 
