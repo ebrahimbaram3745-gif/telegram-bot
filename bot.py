@@ -1,4 +1,5 @@
 import os
+import json
 
 from flask import Flask
 from threading import Thread
@@ -35,6 +36,7 @@ from telegram.ext import (
 )
 
 import os
+import json
 TOKEN = os.getenv("BOT_TOKEN")
 
 CHANNEL_USERNAME = "Pokemon_VPN"
@@ -49,31 +51,54 @@ CARD_NUMBER = "6219861449318822"
 waiting_receipt = {}
 wallet_wait = {}
 pending_config_user = {}
-user_wallets = {}
+user_wallets = load_data("balances.json")
 
 gift_wait = {}
-used_gifts = {}
+used_gifts = load_data("gifts.json")
 pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
 
 eco_prices = {
-    "📊 1G | ⏳ 30D | 💰 50T": 50000,
-    "📊 2G | ⏳ 30D | 💰 95T": 95000,
-    "📊 3G | ⏳ 30D | 💰 140T": 140000,
-    "📊 4G | ⏳ 30D | 💰 190T": 190000,
-    "📊 5G | ⏳ 30D | 💰 235T": 235000,
-    "📊 6G | ⏳ 30D | 💰 287T": 287000,
-    "📊 7G | ⏳ 30D | 💰 340T": 340000,
-    "📊 8G | ⏳ 30D | 💰 387T": 387000,
-    "📊 9G | ⏳ 30D | 💰 438T": 438000,
-    "📊 10G | ⏳ 30D | 💰 490T": 490000,
+    " 1G |  30D |  50T": 50000,
+    " 2G |  30D |  95T": 95000,
+    " 3G |  30D |  140T": 140000,
+    " 4G |  30D |  190T": 190000,
+    " 5G |  30D |  235T": 235000,
+    " 6G |  30D |  287T": 287000,
+    " 7G |  30D |  340T": 340000,
+    " 8G |  30D |  387T": 387000,
+    " 9G |  30D |  438T": 438000,
+    " 10G |  30D |  490T": 490000,
 }
 
 vip_prices = {
-    "📊 70G | ⏳ 30D | 💰 690T": 690000,
+    " 70G |  30D |  690T": 690000,
 }
+
+
+
+
+def load_data(filename):
+
+    if not os.path.exists(filename):
+
+        with open(filename, "w", encoding="utf-8") as f:
+
+            json.dump({}, f)
+
+    with open(filename, "r", encoding="utf-8") as f:
+
+        return json.load(f)
+
+
+def save_data(filename, data):
+
+    with open(filename, "w", encoding="utf-8") as f:
+
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
 
 
 async def joined(user_id, bot):
@@ -101,50 +126,50 @@ def home_keys():
 
         [
             InlineKeyboardButton(
-                "🛒 خرید سرویس",
+                "  ",
                 callback_data="buy"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "💰 کیف پول",
+                "  ",
                 callback_data="wallet"
             ),
 
             InlineKeyboardButton(
-                "📞 پشتیبانی",
+                " ",
                 url=f"https://t.me/{SUPPORT_ID}"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🎁 کد هدیه",
+                "  ",
                 callback_data="gift"
             ),
 
             InlineKeyboardButton(
-                "🆓 تست اکانت رایگان",
+                "   ",
                 callback_data="free_test"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "📚 آموزش اتصال",
+                "  ",
                 callback_data="help"
             ),
 
             InlineKeyboardButton(
-                "📋 تعرفه قیمت‌ها",
+                "  ",
                 callback_data="prices"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "📢 ارسال پیام همگانی",
+                "   ",
                 callback_data="broadcast"
             )
         ]
@@ -164,21 +189,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "📢 عضویت در کانال",
+                    "   ",
                     url=f"https://t.me/{CHANNEL_USERNAME}"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "✅ عضو شدم",
+                    "  ",
                     callback_data="check_join"
                 )
             ]
         ])
 
         await update.message.reply_text(
-            "❌ ابتدا عضو کانال شوید",
+            "    ",
             reply_markup=keyboard
         )
 
@@ -204,11 +229,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_wallets[user_id] = 0
 
     text = """
-✨ به Pokémon VPN خوش اومدی
+  Pokmon VPN  
 
-🚀 سرویس های پرسرعت V2Ray
-🇩🇪 سرورهای پایدار آلمان
-⚡ سرعت بالا و پینگ عالی
+    V2Ray
+   
+     
 """
 
     await update.message.reply_text(
@@ -229,7 +254,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in user_wallets:
         user_wallets[user_id] = 0
 
-    # تایید رسید
+    #  
     if data.startswith("accept_"):
 
         target_user = int(data.split("_")[1])
@@ -245,18 +270,18 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 target_user,
                 f"""
-✅ کیف پول شما شارژ شد
+     
 
-💰 مبلغ:
-{amount:,} تومان
+ :
+{amount:,} 
 
-💵 موجودی جدید:
-{user_wallets[target_user]:,} تومان
+  :
+{user_wallets[target_user]:,} 
 """
             )
 
             await query.answer(
-                "کیف پول شارژ شد ✅",
+                "    ",
                 show_alert=True
             )
 
@@ -267,18 +292,18 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 target_user,
                 """
-✅ پرداخت شما تایید شد
+    
 
-⏳ لطفا منتظر ارسال کانفیگ باشید
+     
 """
             )
 
             await query.answer(
-                "تایید شد ✅",
+                "  ",
                 show_alert=True
             )
 
-    # رد رسید
+    #  
     elif data.startswith("reject_"):
 
         target_user = int(data.split("_")[1])
@@ -286,13 +311,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             target_user,
             """
-❌ پرداخت شما رد شد
+    
 
-📞 با پشتیبانی تماس بگیرید
+    
 """
         )
 
-    # چک عضویت
+    #  
     elif data == "check_join":
 
         ok = await joined(
@@ -303,11 +328,11 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if ok:
 
             text = """
-✨ به Pokémon VPN خوش اومدی
+  Pokmon VPN  
 
-🚀 سرویس های پرسرعت V2Ray
-🇩🇪 سرورهای پایدار آلمان
-⚡ سرعت بالا و پینگ عالی
+    V2Ray
+   
+     
 """
 
             await query.message.edit_text(
@@ -318,19 +343,19 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
 
             await query.answer(
-                "❌ هنوز عضو نشدی",
+                "   ",
                 show_alert=True
             )
 
-    # خانه
+    # 
     elif data == "home":
 
         text = """
-✨ به Pokémon VPN خوش اومدی
+  Pokmon VPN  
 
-🚀 سرویس های پرسرعت V2Ray
-🇩🇪 سرورهای پایدار آلمان
-⚡ سرعت بالا و پینگ عالی
+    V2Ray
+   
+     
 """
 
         await query.message.edit_text(
@@ -338,62 +363,62 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=home_keys()
         )
 
-    # خرید
+    # 
     elif data == "buy":
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "🇩🇪 پلن اقتصادی",
+                    "  ",
                     callback_data="eco"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "💎 پلن VIP",
+                    "  VIP",
                     callback_data="vip"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "🛒 نوع پلن را انتخاب کنید",
+            "     ",
             reply_markup=keyboard
         )
 
-    # کیف پول
+    #  
     elif data == "wallet":
 
         text = f"""
-💰 کیف پول شما
+   
 
-👤 {query.from_user.first_name}
+ {query.from_user.first_name}
 
-💵 موجودی:
-{user_wallets[user_id]:,} تومان
+ :
+{user_wallets[user_id]:,} 
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "➕ افزایش موجودی",
+                    "  ",
                     callback_data="charge"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
@@ -404,7 +429,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    # افزایش موجودی
+    #  
     elif data == "charge":
 
         wallet_wait[user_id] = True
@@ -413,18 +438,18 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="wallet"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "💵 مبلغ موردنظر را ارسال کنید",
+            "     ",
             reply_markup=keyboard
         )
 
-    # اقتصادی
+    # 
     elif data == "eco":
 
         keys = []
@@ -434,7 +459,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keys.append([
 
                 InlineKeyboardButton(
-                    f"🟢 {gb} • {price:,}",
+                    f" {gb}  {price:,}",
                     callback_data=f"eco_{gb}"
                 )
             ])
@@ -442,13 +467,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keys.append([
 
             InlineKeyboardButton(
-                "🔙 بازگشت",
+                " ",
                 callback_data="buy"
             )
         ])
 
         await query.message.edit_text(
-            "🇩🇪 پلن های اقتصادی",
+            "   ",
             reply_markup=InlineKeyboardMarkup(keys)
         )
 
@@ -462,7 +487,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keys.append([
 
                 InlineKeyboardButton(
-                    f"🟢 {gb} • {price:,}",
+                    f" {gb}  {price:,}",
                     callback_data=f"vip_{gb}"
                 )
             ])
@@ -470,17 +495,17 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keys.append([
 
             InlineKeyboardButton(
-                "🔙 بازگشت",
+                " ",
                 callback_data="buy"
             )
         ])
 
         await query.message.edit_text(
-            "💎 پلن های VIP",
+            "   VIP",
             reply_markup=InlineKeyboardMarkup(keys)
         )
 
-    # خرید اقتصادی
+    #  
     elif data.startswith("eco_"):
 
         gb = data.replace("eco_", "")
@@ -493,47 +518,47 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
 
         text = f"""
-🇩🇪 Economic Plan
+ Economic Plan
 
-📦 حجم:
+ :
 {gb}
 
-💵 مبلغ:
-{price:,} تومان
+ :
+{price:,} 
 
-💳 شماره کارت:
+  :
 
 <code>{CARD_NUMBER}</code>
 
-📤 بعد از پرداخت رسید ارسال کنید
+      
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "💰 خرید از کیف پول",
+                    "    ",
                     callback_data=f"buywallet_eco_{gb}"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "📋 کپی شماره کارت",
+                    "   ",
                     switch_inline_query_current_chat=CARD_NUMBER
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "💵 کپی مبلغ",
+                    "  ",
                     switch_inline_query_current_chat=str(price)
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="eco"
                 )
             ]
@@ -545,7 +570,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    # خرید vip
+    #  vip
     elif data.startswith("vip_"):
 
         gb = data.replace("vip_", "")
@@ -558,47 +583,47 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
 
         text = f"""
-💎 VIP Plan
+ VIP Plan
 
-📦 حجم:
+ :
 {gb}
 
-💵 مبلغ:
-{price:,} تومان
+ :
+{price:,} 
 
-💳 شماره کارت:
+  :
 
 <code>{CARD_NUMBER}</code>
 
-📤 بعد از پرداخت رسید ارسال کنید
+      
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "💰 خرید از کیف پول",
+                    "    ",
                     callback_data=f"buywallet_vip_{gb}"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "📋 کپی شماره کارت",
+                    "   ",
                     switch_inline_query_current_chat=CARD_NUMBER
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "💵 کپی مبلغ",
+                    "  ",
                     switch_inline_query_current_chat=str(price)
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="vip"
                 )
             ]
@@ -610,7 +635,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    # خرید با کیف پول اقتصادی
+    #     
     elif data.startswith("buywallet_eco_"):
 
         gb = data.replace("buywallet_eco_", "")
@@ -619,7 +644,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_wallets[user_id] < price:
 
             await query.message.edit_text(
-                "❌ موجودی شما کافی نیست"
+                "    "
             )
 
             return
@@ -631,26 +656,26 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             ADMIN_ID,
             f"""
-🛒 خرید جدید با کیف پول
+     
 
-👤 {query.from_user.first_name}
+ {query.from_user.first_name}
 
-📦 {gb}
+ {gb}
 
-💵 {price:,} تومان
+ {price:,} 
 """
         )
 
         await context.bot.send_message(
             SECOND_ADMIN_ID,
             f"""
-🛒 خرید جدید با کیف پول
+     
 
-👤 {query.from_user.first_name}
+ {query.from_user.first_name}
 
-📦 {gb}
+ {gb}
 
-💵 {price:,} تومان
+ {price:,} 
 """
         )
 
@@ -658,7 +683,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
@@ -666,14 +691,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.message.edit_text(
             """
-✅ خرید انجام شد
+   
 
-⏳ منتظر ارسال کانفیگ باشید
+    
 """,
             reply_markup=keyboard
         )
 
-    # خرید با کیف پول vip
+    #     vip
     elif data.startswith("buywallet_vip_"):
 
         gb = data.replace("buywallet_vip_", "")
@@ -682,7 +707,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_wallets[user_id] < price:
 
             await query.message.edit_text(
-                "❌ موجودی شما کافی نیست"
+                "    "
             )
 
             return
@@ -694,26 +719,26 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             ADMIN_ID,
             f"""
-🛒 خرید جدید با کیف پول
+     
 
-👤 {query.from_user.first_name}
+ {query.from_user.first_name}
 
-📦 {gb}
+ {gb}
 
-💵 {price:,} تومان
+ {price:,} 
 """
         )
 
         await context.bot.send_message(
             SECOND_ADMIN_ID,
             f"""
-🛒 خرید جدید با کیف پول
+     
 
-👤 {query.from_user.first_name}
+ {query.from_user.first_name}
 
-📦 {gb}
+ {gb}
 
-💵 {price:,} تومان
+ {price:,} 
 """
         )
 
@@ -721,7 +746,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
@@ -729,33 +754,33 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.message.edit_text(
             """
-✅ خرید انجام شد
+   
 
-⏳ منتظر ارسال کانفیگ باشید
+    
 """,
             reply_markup=keyboard
         )
 
 
-    # تست رایگان
+    #  
     elif data == "free_test":
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "❌ در حال حاضر اکانت تست موجود نیست",
+            "       ",
             reply_markup=keyboard
         )
 
-    # کد هدیه
+    #  
     elif data == "gift":
 
         gift_wait[user_id] = True
@@ -764,53 +789,53 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "🎁 کد هدیه وارد کنید",
+            "    ",
             reply_markup=keyboard
         )
 
 
-    # تایید کد هدیه
+    #   
     elif data.startswith("gift_accept_"):
 
         target_id = int(data.replace("gift_accept_", ""))
 
-        volume = pending_gifts.get(target_id, "نامشخص")
+        volume = pending_gifts.get(target_id, "")
 
         waiting_config[query.from_user.id] = target_id
 
         await context.bot.send_message(
             chat_id=target_id,
-            text="✅ کد هدیه شما با موفقیت تایید شد\n⏳ در حال بررسی است و منتظر کانفینگ باشید"
+            text="       \n        "
         )
 
         await query.message.reply_text(
-            "📤 کانفینگ کاربر را ارسال کنید"
+            "     "
         )
 
-        await query.answer("تایید شد")
+        await query.answer(" ")
 
-    # رد کد هدیه
+    #   
     elif data.startswith("gift_reject_"):
 
         target_id = int(data.replace("gift_reject_", ""))
 
         await context.bot.send_message(
             chat_id=target_id,
-            text="❌ کد هدیه شما توسط مدیر رد شد"
+            text="       "
         )
 
-        await query.answer("رد شد")
+        await query.answer(" ")
 
 
 
-    # پیام همگانی
+    #  
     elif data == "broadcast":
 
         if user_id != ADMIN_ID:
@@ -831,7 +856,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     chat = await context.bot.get_chat(int(uid))
 
-                    username = chat.username if chat.username else "ندارد"
+                    username = chat.username if chat.username else ""
 
                     users_buttons.append([
 
@@ -847,7 +872,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     users_buttons.append([
 
                         InlineKeyboardButton(
-                            f"کاربر | {uid}",
+                            f" | {uid}",
                             callback_data=f"pm_{uid}"
                         )
 
@@ -860,7 +885,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users_buttons.append([
 
             InlineKeyboardButton(
-                "📢 ارسال پیام به کل کاربران",
+                "     ",
                 callback_data="send_all_users"
             )
 
@@ -869,7 +894,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users_buttons.append([
 
             InlineKeyboardButton(
-                "🔙 بازگشت",
+                " ",
                 callback_data="home"
             )
 
@@ -878,7 +903,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = InlineKeyboardMarkup(users_buttons)
 
         await query.message.edit_text(
-            "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید",
+            "        ",
             reply_markup=keyboard
         )
 
@@ -890,14 +915,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="broadcast"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "📢 پیام خود را برای کل کاربران ارسال کنید",
+            "        ",
             reply_markup=keyboard
         )
 
@@ -911,43 +936,43 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="broadcast"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            f"✉️ پیام خود را برای کاربر {target_id} ارسال کنید",
+            f"      {target_id}  ",
             reply_markup=keyboard
         )
 
 
-    # تعرفه
+    # 
     elif data == "prices":
 
         text = """
-سلام همکار گرامی 😃
+   
 
-🟣 هر گیگ 190 تومان
+   190 
 
 ID : @mak_11q
 
-🟢 آنلاین
+ 
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "🛒 خرید سرویس",
+                    "  ",
                     callback_data="buy"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
@@ -958,26 +983,26 @@ ID : @mak_11q
             reply_markup=keyboard
         )
 
-    # آموزش
+    # 
     elif data == "help":
 
         text = """
-📚 آموزش اتصال
+  
 
-1️⃣ برنامه V2rayNG نصب کنید
+1  V2rayNG  
 
-2️⃣ کانفیگ را کپی کنید
+2    
 
-3️⃣ داخل برنامه Paste کنید
+3   Paste 
 
-4️⃣ Connect بزنید
+4 Connect 
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="home"
                 )
             ]
@@ -993,7 +1018,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
 
-    # ارسال کانفیگ
+    #  
     if (
         user_id == ADMIN_ID
         or user_id == SECOND_ADMIN_ID
@@ -1006,17 +1031,17 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             target_user,
             f"""
-🎉 کانفیگ شما آماده شد
+    
 
 <code>{update.message.text}</code>
 
-🚀 اتصال پرسرعت و پایدار
+    
 """,
             parse_mode="HTML"
         )
 
         await update.message.reply_text(
-            "✅ کانفیگ ارسال شد"
+            "   "
         )
 
         del pending_config_user[
@@ -1026,7 +1051,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
-    # کد هدیه
+    #  
     if user_id in gift_wait:
 
         code = update.message.text.strip()
@@ -1037,7 +1062,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if code in used_gifts[user_id]:
 
             await update.message.reply_text(
-                "❌ شما قبلاً از این کد هدیه استفاده کرده‌اید"
+                "        "
             )
 
             return
@@ -1046,18 +1071,20 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             used_gifts[user_id].append(code)
 
-            pending_gifts[user_id] = "1 گیگ"
+            save_data("gifts.json", used_gifts)
+
+            pending_gifts[user_id] = "1 "
 
             keyboard = InlineKeyboardMarkup([
 
                 [
                     InlineKeyboardButton(
-                        "✅ تایید",
+                        " ",
                         callback_data=f"gift_accept_{user_id}"
                     ),
 
                     InlineKeyboardButton(
-                        "❌ رد کردن",
+                        "  ",
                         callback_data=f"gift_reject_{user_id}"
                     )
                 ]
@@ -1066,28 +1093,28 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 ADMIN_ID,
                 f"""
-🎁 کد هدیه جدید ثبت شد
+     
 
-👤 نام:
+ :
 {update.effective_user.first_name}
 
-🆔 یوزرنیم:
+ :
 @{update.effective_user.username}
 
-📌 آیدی:
+ :
 {user_id}
 
-🎁 کد هدیه:
+  :
 mam4di
 
-📦 حجم:
-1 گیگ
+ :
+1 
 """,
                 reply_markup=keyboard
             )
 
             await update.message.reply_text(
-                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 1 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
+                "       \n     1  \n        "
             )
 
             del gift_wait[user_id]
@@ -1098,18 +1125,20 @@ mam4di
 
             used_gifts[user_id].append(code)
 
-            pending_gifts[user_id] = "2 گیگ"
+            save_data("gifts.json", used_gifts)
+
+            pending_gifts[user_id] = "2 "
 
             keyboard = InlineKeyboardMarkup([
 
                 [
                     InlineKeyboardButton(
-                        "✅ تایید",
+                        " ",
                         callback_data=f"gift_accept_{user_id}"
                     ),
 
                     InlineKeyboardButton(
-                        "❌ رد کردن",
+                        "  ",
                         callback_data=f"gift_reject_{user_id}"
                     )
                 ]
@@ -1118,28 +1147,28 @@ mam4di
             await context.bot.send_message(
                 ADMIN_ID,
                 f"""
-🎁 کد هدیه جدید ثبت شد
+     
 
-👤 نام:
+ :
 {update.effective_user.first_name}
 
-🆔 یوزرنیم:
+ :
 @{update.effective_user.username}
 
-📌 آیدی:
+ :
 {user_id}
 
-🎁 کد هدیه:
+  :
 mam4di_1k
 
-📦 حجم:
-2 گیگ
+ :
+2 
 """,
                 reply_markup=keyboard
             )
 
             await update.message.reply_text(
-                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 2 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
+                "       \n     2  \n        "
             )
 
             del gift_wait[user_id]
@@ -1149,14 +1178,14 @@ mam4di_1k
         else:
 
             await update.message.reply_text(
-                "❌ کد هدیه نامعتبر است"
+                "    "
             )
 
             return
 
 
 
-    # ارسال کانفیگ توسط مدیر
+    #    
     if user_id in waiting_config:
 
         target_user = waiting_config[user_id]
@@ -1167,14 +1196,14 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "✅ کانفینگ با موفقیت ارسال شد"
+            "     "
         )
 
         del waiting_config[user_id]
 
         return
 
-    # پیام همگانی
+    #  
     if user_id in broadcast_wait:
 
         try:
@@ -1199,13 +1228,13 @@ mam4di_1k
                     pass
 
             await update.message.reply_text(
-                "✅ پیام شما با موفقیت برای کاربران ارسال شد"
+                "        "
             )
 
         except:
 
             await update.message.reply_text(
-                "❌ لیست کاربران پیدا نشد"
+                "    "
             )
 
         del broadcast_wait[user_id]
@@ -1214,7 +1243,7 @@ mam4di_1k
 
 
 
-    # پیام خصوصی مدیر
+    #   
     if user_id in private_message_wait:
 
         target_user = private_message_wait[user_id]
@@ -1225,7 +1254,7 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "✅ پیام شما با موفقیت ارسال شد"
+            "      "
         )
 
         del private_message_wait[user_id]
@@ -1233,7 +1262,7 @@ mam4di_1k
         return
 
 
-    # مبلغ کیف پول
+    #   
     if user_id in wallet_wait:
 
         try:
@@ -1242,7 +1271,7 @@ mam4di_1k
         except:
 
             await update.message.reply_text(
-                "❌ فقط عدد وارد کنید"
+                "    "
             )
 
             return
@@ -1253,37 +1282,37 @@ mam4di_1k
         }
 
         text = f"""
-💰 افزایش موجودی کیف پول
+    
 
-💵 مبلغ:
-{amount:,} تومان
+ :
+{amount:,} 
 
-💳 شماره کارت:
+  :
 
 <code>{CARD_NUMBER}</code>
 
-📤 بعد از واریز رسید ارسال کنید
+      
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "📋 کپی شماره کارت",
+                    "   ",
                     switch_inline_query_current_chat=CARD_NUMBER
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "💵 کپی مبلغ",
+                    "  ",
                     switch_inline_query_current_chat=str(amount)
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "🔙 بازگشت",
+                    " ",
                     callback_data="wallet"
                 )
             ]
@@ -1311,23 +1340,23 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if info["type"] == "wallet":
 
-        txt = f"شارژ کیف پول\n{info['amount']:,} تومان"
+        txt = f"  \n{info['amount']:,} "
 
     else:
 
-        txt = f"{info['plan']} | {info['amount']:,} تومان"
+        txt = f"{info['plan']} | {info['amount']:,} "
 
     caption = f"""
-📥 رسید جدید
+  
 
-👤 {update.effective_user.first_name}
+ {update.effective_user.first_name}
 
-🆔 @{update.effective_user.username}
+ @{update.effective_user.username}
 
-📌 ID:
+ ID:
 {user_id}
 
-🛒 اطلاعات:
+ :
 {txt}
 """
 
@@ -1335,12 +1364,12 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         [
             InlineKeyboardButton(
-                "✅ تایید",
+                " ",
                 callback_data=f"accept_{user_id}"
             ),
 
             InlineKeyboardButton(
-                "❌ رد",
+                " ",
                 callback_data=f"reject_{user_id}"
             )
         ]
@@ -1364,14 +1393,14 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         [
             InlineKeyboardButton(
-                "🔙 بازگشت",
+                " ",
                 callback_data="home"
             )
         ]
     ])
 
     await update.message.reply_text(
-        "✅ رسید شما ثبت شد\n⏳ منتظر تایید مدیریت باشید",
+        "    \n    ",
         reply_markup=keyboard2
     )
 
