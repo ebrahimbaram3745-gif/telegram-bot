@@ -152,6 +152,25 @@ def home_keys():
     ])
 
 
+
+
+def tr(user_id, fa, en=None, ar=None, tr_text=None):
+
+    lang = user_languages.get(user_id, "fa")
+
+    if lang == "en":
+        return en if en else fa
+
+    elif lang == "ar":
+        return ar if ar else fa
+
+    elif lang == "tr":
+        return tr_text if tr_text else fa
+
+    return fa
+
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     ok = await joined(
@@ -203,7 +222,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         await update.message.reply_text(
-            "🌍 لطفا زبان خود را انتخاب کنید",
+            tr(user_id, "🌍 لطفا زبان خود را انتخاب کنید", "🌍 Please select your language", "🌍 الرجاء اختيار لغتك", "🌍 Lütfen dilinizi seçin"),
             reply_markup=keyboard
         )
 
@@ -814,7 +833,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         await query.message.edit_text(
-            "❌ در حال حاضر اکانت تست موجود نیست",
+            tr(user_id, "❌ در حال حاضر اکانت تست موجود نیست", "❌ Free test account is not available now", "❌ الحساب التجريبي غير متوفر حاليا", "❌ Ücretsiz test hesabı şu anda mevcut değil"),
             reply_markup=keyboard
         )
 
@@ -834,7 +853,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         await query.message.edit_text(
-            "🎁 کد هدیه وارد کنید",
+            tr(user_id, "🎁 کد هدیه وارد کنید", "🎁 Enter gift code", "🎁 أدخل كود الهدية", "🎁 Hediye kodunu girin"),
             reply_markup=keyboard
         )
 
@@ -854,7 +873,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await query.message.reply_text(
-            "📤 کانفینگ کاربر را ارسال کنید"
+            tr(user_id, "📤 کانفینگ کاربر را ارسال کنید", "📤 Send user config", "📤 أرسل إعداد المستخدم", "📤 Kullanıcı yapılandırmasını gönderin")
         )
 
         await query.answer("تایید شد")
@@ -941,7 +960,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = InlineKeyboardMarkup(users_buttons)
 
         await query.message.edit_text(
-            "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید",
+            tr(user_id, "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید", "📢 Select a user or send to all users", "📢 اختر مستخدمًا أو أرسل للجميع", "📢 Bir kullanıcı seçin veya herkese gönderin"),
             reply_markup=keyboard
         )
 
@@ -960,7 +979,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         await query.message.edit_text(
-            "📢 پیام خود را برای کل کاربران ارسال کنید",
+            tr(user_id, "📢 پیام خود را برای کل کاربران ارسال کنید", "📢 Send your message to all users", "📢 أرسل رسالتك إلى جميع المستخدمين", "📢 Mesajınızı tüm kullanıcılara gönderin"),
             reply_markup=keyboard
         )
 
@@ -1212,7 +1231,7 @@ mam4di_1k
         else:
 
             await update.message.reply_text(
-                "❌ کد هدیه نامعتبر است"
+                tr(user_id, "❌ کد هدیه نامعتبر است", "❌ Invalid gift code", "❌ كود الهدية غير صالح", "❌ Geçersiz hediye kodu")
             )
 
             return
@@ -1230,7 +1249,7 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "✅ کانفینگ با موفقیت ارسال شد"
+            tr(user_id, "✅ کانفینگ با موفقیت ارسال شد", "✅ Config sent successfully", "✅ تم إرسال الكونفيغ بنجاح", "✅ Yapılandırma başarıyla gönderildi")
         )
 
         del waiting_config[user_id]
@@ -1288,7 +1307,7 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "✅ پیام شما با موفقیت ارسال شد"
+            tr(user_id, "✅ پیام شما با موفقیت ارسال شد", "✅ Your message was sent successfully", "✅ تم إرسال رسالتك بنجاح", "✅ Mesajınız başarıyla gönderildi")
         )
 
         del private_message_wait[user_id]
