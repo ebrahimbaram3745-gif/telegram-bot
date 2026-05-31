@@ -57,6 +57,7 @@ pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
+user_languages = {}
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
@@ -185,6 +186,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
+
+    if user_id not in user_languages:
+
+        keyboard = InlineKeyboardMarkup([
+
+            [
+                InlineKeyboardButton("🇮🇷 فارسی", callback_data="lang_fa"),
+                InlineKeyboardButton("🇺🇸 English", callback_data="lang_en")
+            ],
+
+            [
+                InlineKeyboardButton("🇸🇦 العربية", callback_data="lang_ar"),
+                InlineKeyboardButton("🇹🇷 Türkçe", callback_data="lang_tr")
+            ]
+        ])
+
+        await update.message.reply_text(
+            "🌍 لطفا زبان خود را انتخاب کنید",
+            reply_markup=keyboard
+        )
+
+        return
 
     try:
         with open("users.txt", "a+", encoding="utf-8") as f:
@@ -733,6 +756,46 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 ⏳ منتظر ارسال کانفیگ باشید
 """,
+            reply_markup=keyboard
+        )
+
+
+
+    # انتخاب زبان
+    elif data.startswith("lang_"):
+
+        lang = data.replace("lang_", "")
+
+        user_languages[user_id] = lang
+
+        keyboard = InlineKeyboardMarkup([
+
+            [
+                InlineKeyboardButton(
+                    "▶️ استارت",
+                    callback_data="home"
+                )
+            ]
+        ])
+
+        if lang == "fa":
+
+            msg = "✅ زبان فارسی انتخاب شد"
+
+        elif lang == "en":
+
+            msg = "✅ English language selected"
+
+        elif lang == "ar":
+
+            msg = "✅ تم اختيار اللغة العربية"
+
+        else:
+
+            msg = "✅ Türkçe dili seçildi"
+
+        await query.message.edit_text(
+            msg,
             reply_markup=keyboard
         )
 
