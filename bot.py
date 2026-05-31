@@ -51,6 +51,9 @@ wallet_wait = {}
 pending_config_user = {}
 user_wallets = {}
 
+gift_wait = {}
+used_gifts = {}
+
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
     "📊 2G | ⏳ 30D | 💰 95T": 95000,
@@ -108,6 +111,18 @@ def home_keys():
             InlineKeyboardButton(
                 "📞 پشتیبانی",
                 url=f"https://t.me/{SUPPORT_ID}"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🎁 کد هدیه",
+                callback_data="gift"
+            ),
+
+            InlineKeyboardButton(
+                "🆓 تست اکانت رایگان",
+                callback_data="free_test"
             )
         ],
 
@@ -696,6 +711,45 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
+
+    # تست رایگان
+    elif data == "free_test":
+
+        keyboard = InlineKeyboardMarkup([
+
+            [
+                InlineKeyboardButton(
+                    "🔙 بازگشت",
+                    callback_data="home"
+                )
+            ]
+        ])
+
+        await query.message.edit_text(
+            "❌ در حال حاضر اکانت تست موجود نیست",
+            reply_markup=keyboard
+        )
+
+    # کد هدیه
+    elif data == "gift":
+
+        gift_wait[user_id] = True
+
+        keyboard = InlineKeyboardMarkup([
+
+            [
+                InlineKeyboardButton(
+                    "🔙 بازگشت",
+                    callback_data="home"
+                )
+            ]
+        ])
+
+        await query.message.edit_text(
+            "🎁 کد هدیه وارد کنید",
+            reply_markup=keyboard
+        )
+
     # تعرفه
     elif data == "prices":
 
@@ -797,6 +851,96 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
 
         return
+
+
+    # کد هدیه
+    if user_id in gift_wait:
+
+        code = update.message.text.strip()
+
+        if user_id not in used_gifts:
+            used_gifts[user_id] = []
+
+        if code in used_gifts[user_id]:
+
+            await update.message.reply_text(
+                "❌ شما قبلاً از این کد هدیه استفاده کرده‌اید"
+            )
+
+            return
+
+        if code == "mam4di":
+
+            used_gifts[user_id].append(code)
+
+            await context.bot.send_message(
+                ADMIN_ID,
+                f"""
+🎁 کد هدیه جدید ثبت شد
+
+👤 {update.effective_user.first_name}
+
+🆔 @{update.effective_user.username}
+
+📌 ID:
+{user_id}
+
+🎁 کد:
+mam4di
+
+📦 حجم:
+1 گیگ
+"""
+            )
+
+            await update.message.reply_text(
+                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 1 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
+            )
+
+            del gift_wait[user_id]
+
+            return
+
+        elif code == "mam4di_1k":
+
+            used_gifts[user_id].append(code)
+
+            await context.bot.send_message(
+                ADMIN_ID,
+                f"""
+🎁 کد هدیه جدید ثبت شد
+
+👤 {update.effective_user.first_name}
+
+🆔 @{update.effective_user.username}
+
+📌 ID:
+{user_id}
+
+🎁 کد:
+mam4di_1k
+
+📦 حجم:
+2 گیگ
+"""
+            )
+
+            await update.message.reply_text(
+                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 2 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
+            )
+
+            del gift_wait[user_id]
+
+            return
+
+        else:
+
+            await update.message.reply_text(
+                "❌ کد هدیه نامعتبر است"
+            )
+
+            return
+
 
     # مبلغ کیف پول
     if user_id in wallet_wait:
