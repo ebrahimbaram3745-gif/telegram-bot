@@ -1,5 +1,4 @@
 import os
-import json
 
 from flask import Flask
 from threading import Thread
@@ -50,44 +49,31 @@ CARD_NUMBER = "6219861449318822"
 waiting_receipt = {}
 wallet_wait = {}
 pending_config_user = {}
-user_wallets = load_data("balances.json")
+user_wallets = {}
 
 gift_wait = {}
-used_gifts = load_data("gifts.json")
+used_gifts = {}
 pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
 
 eco_prices = {
-    "ð 1G | â³ 30D | ð° 50T": 50000,
-    "ð 2G | â³ 30D | ð° 95T": 95000,
-    "ð 3G | â³ 30D | ð° 140T": 140000,
-    "ð 4G | â³ 30D | ð° 190T": 190000,
-    "ð 5G | â³ 30D | ð° 235T": 235000,
-    "ð 6G | â³ 30D | ð° 287T": 287000,
-    "ð 7G | â³ 30D | ð° 340T": 340000,
-    "ð 8G | â³ 30D | ð° 387T": 387000,
-    "ð 9G | â³ 30D | ð° 438T": 438000,
-    "ð 10G | â³ 30D | ð° 490T": 490000,
+    "📊 1G | ⏳ 30D | 💰 50T": 50000,
+    "📊 2G | ⏳ 30D | 💰 95T": 95000,
+    "📊 3G | ⏳ 30D | 💰 140T": 140000,
+    "📊 4G | ⏳ 30D | 💰 190T": 190000,
+    "📊 5G | ⏳ 30D | 💰 235T": 235000,
+    "📊 6G | ⏳ 30D | 💰 287T": 287000,
+    "📊 7G | ⏳ 30D | 💰 340T": 340000,
+    "📊 8G | ⏳ 30D | 💰 387T": 387000,
+    "📊 9G | ⏳ 30D | 💰 438T": 438000,
+    "📊 10G | ⏳ 30D | 💰 490T": 490000,
 }
 
 vip_prices = {
-    "ð 70G | â³ 30D | ð° 690T": 690000,
+    "📊 70G | ⏳ 30D | 💰 690T": 690000,
 }
-
-
-def load_data(filename):
-    if not os.path.exists(filename):
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump({}, f)
-    with open(filename, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_data(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
 
 
 async def joined(user_id, bot):
@@ -115,50 +101,50 @@ def home_keys():
 
         [
             InlineKeyboardButton(
-                "ð Ø®Ø±ÛØ¯ Ø³Ø±ÙÛØ³",
+                "🛒 خرید سرویس",
                 callback_data="buy"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "ð° Ú©ÛÙ Ù¾ÙÙ",
+                "💰 کیف پول",
                 callback_data="wallet"
             ),
 
             InlineKeyboardButton(
-                "ð Ù¾Ø´ØªÛØ¨Ø§ÙÛ",
+                "📞 پشتیبانی",
                 url=f"https://t.me/{SUPPORT_ID}"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "ð Ú©Ø¯ ÙØ¯ÛÙ",
+                "🎁 کد هدیه",
                 callback_data="gift"
             ),
 
             InlineKeyboardButton(
-                "ð ØªØ³Øª Ø§Ú©Ø§ÙØª Ø±Ø§ÛÚ¯Ø§Ù",
+                "🆓 تست اکانت رایگان",
                 callback_data="free_test"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "ð Ø¢ÙÙØ²Ø´ Ø§ØªØµØ§Ù",
+                "📚 آموزش اتصال",
                 callback_data="help"
             ),
 
             InlineKeyboardButton(
-                "ð ØªØ¹Ø±ÙÙ ÙÛÙØªâÙØ§",
+                "📋 تعرفه قیمت‌ها",
                 callback_data="prices"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "ð¢ Ø§Ø±Ø³Ø§Ù Ù¾ÛØ§Ù ÙÙÚ¯Ø§ÙÛ",
+                "📢 ارسال پیام همگانی",
                 callback_data="broadcast"
             )
         ]
@@ -178,21 +164,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "ð¢ Ø¹Ø¶ÙÛØª Ø¯Ø± Ú©Ø§ÙØ§Ù",
+                    "📢 عضویت در کانال",
                     url=f"https://t.me/{CHANNEL_USERNAME}"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "â Ø¹Ø¶Ù Ø´Ø¯Ù",
+                    "✅ عضو شدم",
                     callback_data="check_join"
                 )
             ]
         ])
 
         await update.message.reply_text(
-            "â Ø§Ø¨ØªØ¯Ø§ Ø¹Ø¶Ù Ú©Ø§ÙØ§Ù Ø´ÙÛØ¯",
+            "❌ ابتدا عضو کانال شوید",
             reply_markup=keyboard
         )
 
@@ -216,14 +202,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id not in user_wallets:
         user_wallets[user_id] = 0
-        save_data("balances.json", user_wallets)
 
     text = """
-â¨ Ø¨Ù PokÃ©mon VPN Ø®ÙØ´ Ø§ÙÙØ¯Û
+✨ به Pokémon VPN خوش اومدی
 
-ð Ø³Ø±ÙÛØ³ ÙØ§Û Ù¾Ø±Ø³Ø±Ø¹Øª V2Ray
-ð©ðª Ø³Ø±ÙØ±ÙØ§Û Ù¾Ø§ÛØ¯Ø§Ø± Ø¢ÙÙØ§Ù
-â¡ Ø³Ø±Ø¹Øª Ø¨Ø§ÙØ§ Ù Ù¾ÛÙÚ¯ Ø¹Ø§ÙÛ
+🚀 سرویس های پرسرعت V2Ray
+🇩🇪 سرورهای پایدار آلمان
+⚡ سرعت بالا و پینگ عالی
 """
 
     await update.message.reply_text(
@@ -243,9 +228,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id not in user_wallets:
         user_wallets[user_id] = 0
-        save_data("balances.json", user_wallets)
 
-    # ØªØ§ÛÛØ¯ Ø±Ø³ÛØ¯
+    # تایید رسید
     if data.startswith("accept_"):
 
         target_user = int(data.split("_")[1])
@@ -257,23 +241,22 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             amount = info["amount"]
 
             user_wallets[target_user] += amount
-            save_data("balances.json", user_wallets)
 
             await context.bot.send_message(
                 target_user,
                 f"""
-â Ú©ÛÙ Ù¾ÙÙ Ø´ÙØ§ Ø´Ø§Ø±Ú Ø´Ø¯
+✅ کیف پول شما شارژ شد
 
-ð° ÙØ¨ÙØº:
-{amount:,} ØªÙÙØ§Ù
+💰 مبلغ:
+{amount:,} تومان
 
-ðµ ÙÙØ¬ÙØ¯Û Ø¬Ø¯ÛØ¯:
-{user_wallets[target_user]:,} ØªÙÙØ§Ù
+💵 موجودی جدید:
+{user_wallets[target_user]:,} تومان
 """
             )
 
             await query.answer(
-                "Ú©ÛÙ Ù¾ÙÙ Ø´Ø§Ø±Ú Ø´Ø¯ â",
+                "کیف پول شارژ شد ✅",
                 show_alert=True
             )
 
@@ -284,18 +267,18 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 target_user,
                 """
-â Ù¾Ø±Ø¯Ø§Ø®Øª Ø´ÙØ§ ØªØ§ÛÛØ¯ Ø´Ø¯
+✅ پرداخت شما تایید شد
 
-â³ ÙØ·ÙØ§ ÙÙØªØ¸Ø± Ø§Ø±Ø³Ø§Ù Ú©Ø§ÙÙÛÚ¯ Ø¨Ø§Ø´ÛØ¯
+⏳ لطفا منتظر ارسال کانفیگ باشید
 """
             )
 
             await query.answer(
-                "ØªØ§ÛÛØ¯ Ø´Ø¯ â",
+                "تایید شد ✅",
                 show_alert=True
             )
 
-    # Ø±Ø¯ Ø±Ø³ÛØ¯
+    # رد رسید
     elif data.startswith("reject_"):
 
         target_user = int(data.split("_")[1])
@@ -303,13 +286,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             target_user,
             """
-â Ù¾Ø±Ø¯Ø§Ø®Øª Ø´ÙØ§ Ø±Ø¯ Ø´Ø¯
+❌ پرداخت شما رد شد
 
-ð Ø¨Ø§ Ù¾Ø´ØªÛØ¨Ø§ÙÛ ØªÙØ§Ø³ Ø¨Ú¯ÛØ±ÛØ¯
+📞 با پشتیبانی تماس بگیرید
 """
         )
 
-    # ÚÚ© Ø¹Ø¶ÙÛØª
+    # چک عضویت
     elif data == "check_join":
 
         ok = await joined(
@@ -320,11 +303,11 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if ok:
 
             text = """
-â¨ Ø¨Ù PokÃ©mon VPN Ø®ÙØ´ Ø§ÙÙØ¯Û
+✨ به Pokémon VPN خوش اومدی
 
-ð Ø³Ø±ÙÛØ³ ÙØ§Û Ù¾Ø±Ø³Ø±Ø¹Øª V2Ray
-ð©ðª Ø³Ø±ÙØ±ÙØ§Û Ù¾Ø§ÛØ¯Ø§Ø± Ø¢ÙÙØ§Ù
-â¡ Ø³Ø±Ø¹Øª Ø¨Ø§ÙØ§ Ù Ù¾ÛÙÚ¯ Ø¹Ø§ÙÛ
+🚀 سرویس های پرسرعت V2Ray
+🇩🇪 سرورهای پایدار آلمان
+⚡ سرعت بالا و پینگ عالی
 """
 
             await query.message.edit_text(
@@ -335,19 +318,19 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
 
             await query.answer(
-                "â ÙÙÙØ² Ø¹Ø¶Ù ÙØ´Ø¯Û",
+                "❌ هنوز عضو نشدی",
                 show_alert=True
             )
 
-    # Ø®Ø§ÙÙ
+    # خانه
     elif data == "home":
 
         text = """
-â¨ Ø¨Ù PokÃ©mon VPN Ø®ÙØ´ Ø§ÙÙØ¯Û
+✨ به Pokémon VPN خوش اومدی
 
-ð Ø³Ø±ÙÛØ³ ÙØ§Û Ù¾Ø±Ø³Ø±Ø¹Øª V2Ray
-ð©ðª Ø³Ø±ÙØ±ÙØ§Û Ù¾Ø§ÛØ¯Ø§Ø± Ø¢ÙÙØ§Ù
-â¡ Ø³Ø±Ø¹Øª Ø¨Ø§ÙØ§ Ù Ù¾ÛÙÚ¯ Ø¹Ø§ÙÛ
+🚀 سرویس های پرسرعت V2Ray
+🇩🇪 سرورهای پایدار آلمان
+⚡ سرعت بالا و پینگ عالی
 """
 
         await query.message.edit_text(
@@ -355,62 +338,62 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=home_keys()
         )
 
-    # Ø®Ø±ÛØ¯
+    # خرید
     elif data == "buy":
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "ð©ðª Ù¾ÙÙ Ø§ÙØªØµØ§Ø¯Û",
+                    "🇩🇪 پلن اقتصادی",
                     callback_data="eco"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ù¾ÙÙ VIP",
+                    "💎 پلن VIP",
                     callback_data="vip"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "ð ÙÙØ¹ Ù¾ÙÙ Ø±Ø§ Ø§ÙØªØ®Ø§Ø¨ Ú©ÙÛØ¯",
+            "🛒 نوع پلن را انتخاب کنید",
             reply_markup=keyboard
         )
 
-    # Ú©ÛÙ Ù¾ÙÙ
+    # کیف پول
     elif data == "wallet":
 
         text = f"""
-ð° Ú©ÛÙ Ù¾ÙÙ Ø´ÙØ§
+💰 کیف پول شما
 
-ð¤ {query.from_user.first_name}
+👤 {query.from_user.first_name}
 
-ðµ ÙÙØ¬ÙØ¯Û:
-{user_wallets[user_id]:,} ØªÙÙØ§Ù
+💵 موجودی:
+{user_wallets[user_id]:,} تومان
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "â Ø§ÙØ²Ø§ÛØ´ ÙÙØ¬ÙØ¯Û",
+                    "➕ افزایش موجودی",
                     callback_data="charge"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
@@ -421,7 +404,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    # Ø§ÙØ²Ø§ÛØ´ ÙÙØ¬ÙØ¯Û
+    # افزایش موجودی
     elif data == "charge":
 
         wallet_wait[user_id] = True
@@ -430,18 +413,18 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="wallet"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "ðµ ÙØ¨ÙØº ÙÙØ±Ø¯ÙØ¸Ø± Ø±Ø§ Ø§Ø±Ø³Ø§Ù Ú©ÙÛØ¯",
+            "💵 مبلغ موردنظر را ارسال کنید",
             reply_markup=keyboard
         )
 
-    # Ø§ÙØªØµØ§Ø¯Û
+    # اقتصادی
     elif data == "eco":
 
         keys = []
@@ -451,7 +434,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keys.append([
 
                 InlineKeyboardButton(
-                    f"ð¢ {gb} â¢ {price:,}",
+                    f"🟢 {gb} • {price:,}",
                     callback_data=f"eco_{gb}"
                 )
             ])
@@ -459,13 +442,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keys.append([
 
             InlineKeyboardButton(
-                "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                "🔙 بازگشت",
                 callback_data="buy"
             )
         ])
 
         await query.message.edit_text(
-            "ð©ðª Ù¾ÙÙ ÙØ§Û Ø§ÙØªØµØ§Ø¯Û",
+            "🇩🇪 پلن های اقتصادی",
             reply_markup=InlineKeyboardMarkup(keys)
         )
 
@@ -479,7 +462,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keys.append([
 
                 InlineKeyboardButton(
-                    f"ð¢ {gb} â¢ {price:,}",
+                    f"🟢 {gb} • {price:,}",
                     callback_data=f"vip_{gb}"
                 )
             ])
@@ -487,17 +470,17 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keys.append([
 
             InlineKeyboardButton(
-                "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                "🔙 بازگشت",
                 callback_data="buy"
             )
         ])
 
         await query.message.edit_text(
-            "ð Ù¾ÙÙ ÙØ§Û VIP",
+            "💎 پلن های VIP",
             reply_markup=InlineKeyboardMarkup(keys)
         )
 
-    # Ø®Ø±ÛØ¯ Ø§ÙØªØµØ§Ø¯Û
+    # خرید اقتصادی
     elif data.startswith("eco_"):
 
         gb = data.replace("eco_", "")
@@ -510,47 +493,47 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
 
         text = f"""
-ð©ðª Economic Plan
+🇩🇪 Economic Plan
 
-ð¦ Ø­Ø¬Ù:
+📦 حجم:
 {gb}
 
-ðµ ÙØ¨ÙØº:
-{price:,} ØªÙÙØ§Ù
+💵 مبلغ:
+{price:,} تومان
 
-ð³ Ø´ÙØ§Ø±Ù Ú©Ø§Ø±Øª:
+💳 شماره کارت:
 
 <code>{CARD_NUMBER}</code>
 
-ð¤ Ø¨Ø¹Ø¯ Ø§Ø² Ù¾Ø±Ø¯Ø§Ø®Øª Ø±Ø³ÛØ¯ Ø§Ø±Ø³Ø§Ù Ú©ÙÛØ¯
+📤 بعد از پرداخت رسید ارسال کنید
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "ð° Ø®Ø±ÛØ¯ Ø§Ø² Ú©ÛÙ Ù¾ÙÙ",
+                    "💰 خرید از کیف پول",
                     callback_data=f"buywallet_eco_{gb}"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ú©Ù¾Û Ø´ÙØ§Ø±Ù Ú©Ø§Ø±Øª",
+                    "📋 کپی شماره کارت",
                     switch_inline_query_current_chat=CARD_NUMBER
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ðµ Ú©Ù¾Û ÙØ¨ÙØº",
+                    "💵 کپی مبلغ",
                     switch_inline_query_current_chat=str(price)
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="eco"
                 )
             ]
@@ -562,7 +545,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    # Ø®Ø±ÛØ¯ vip
+    # خرید vip
     elif data.startswith("vip_"):
 
         gb = data.replace("vip_", "")
@@ -575,47 +558,47 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
 
         text = f"""
-ð VIP Plan
+💎 VIP Plan
 
-ð¦ Ø­Ø¬Ù:
+📦 حجم:
 {gb}
 
-ðµ ÙØ¨ÙØº:
-{price:,} ØªÙÙØ§Ù
+💵 مبلغ:
+{price:,} تومان
 
-ð³ Ø´ÙØ§Ø±Ù Ú©Ø§Ø±Øª:
+💳 شماره کارت:
 
 <code>{CARD_NUMBER}</code>
 
-ð¤ Ø¨Ø¹Ø¯ Ø§Ø² Ù¾Ø±Ø¯Ø§Ø®Øª Ø±Ø³ÛØ¯ Ø§Ø±Ø³Ø§Ù Ú©ÙÛØ¯
+📤 بعد از پرداخت رسید ارسال کنید
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "ð° Ø®Ø±ÛØ¯ Ø§Ø² Ú©ÛÙ Ù¾ÙÙ",
+                    "💰 خرید از کیف پول",
                     callback_data=f"buywallet_vip_{gb}"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ú©Ù¾Û Ø´ÙØ§Ø±Ù Ú©Ø§Ø±Øª",
+                    "📋 کپی شماره کارت",
                     switch_inline_query_current_chat=CARD_NUMBER
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ðµ Ú©Ù¾Û ÙØ¨ÙØº",
+                    "💵 کپی مبلغ",
                     switch_inline_query_current_chat=str(price)
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="vip"
                 )
             ]
@@ -627,7 +610,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    # Ø®Ø±ÛØ¯ Ø¨Ø§ Ú©ÛÙ Ù¾ÙÙ Ø§ÙØªØµØ§Ø¯Û
+    # خرید با کیف پول اقتصادی
     elif data.startswith("buywallet_eco_"):
 
         gb = data.replace("buywallet_eco_", "")
@@ -636,39 +619,38 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_wallets[user_id] < price:
 
             await query.message.edit_text(
-                "â ÙÙØ¬ÙØ¯Û Ø´ÙØ§ Ú©Ø§ÙÛ ÙÛØ³Øª"
+                "❌ موجودی شما کافی نیست"
             )
 
             return
 
         user_wallets[user_id] -= price
-        save_data("balances.json", user_wallets)
 
         pending_config_user[user_id] = user_id
 
         await context.bot.send_message(
             ADMIN_ID,
             f"""
-ð Ø®Ø±ÛØ¯ Ø¬Ø¯ÛØ¯ Ø¨Ø§ Ú©ÛÙ Ù¾ÙÙ
+🛒 خرید جدید با کیف پول
 
-ð¤ {query.from_user.first_name}
+👤 {query.from_user.first_name}
 
-ð¦ {gb}
+📦 {gb}
 
-ðµ {price:,} ØªÙÙØ§Ù
+💵 {price:,} تومان
 """
         )
 
         await context.bot.send_message(
             SECOND_ADMIN_ID,
             f"""
-ð Ø®Ø±ÛØ¯ Ø¬Ø¯ÛØ¯ Ø¨Ø§ Ú©ÛÙ Ù¾ÙÙ
+🛒 خرید جدید با کیف پول
 
-ð¤ {query.from_user.first_name}
+👤 {query.from_user.first_name}
 
-ð¦ {gb}
+📦 {gb}
 
-ðµ {price:,} ØªÙÙØ§Ù
+💵 {price:,} تومان
 """
         )
 
@@ -676,7 +658,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
@@ -684,14 +666,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.message.edit_text(
             """
-â Ø®Ø±ÛØ¯ Ø§ÙØ¬Ø§Ù Ø´Ø¯
+✅ خرید انجام شد
 
-â³ ÙÙØªØ¸Ø± Ø§Ø±Ø³Ø§Ù Ú©Ø§ÙÙÛÚ¯ Ø¨Ø§Ø´ÛØ¯
+⏳ منتظر ارسال کانفیگ باشید
 """,
             reply_markup=keyboard
         )
 
-    # Ø®Ø±ÛØ¯ Ø¨Ø§ Ú©ÛÙ Ù¾ÙÙ vip
+    # خرید با کیف پول vip
     elif data.startswith("buywallet_vip_"):
 
         gb = data.replace("buywallet_vip_", "")
@@ -700,39 +682,38 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user_wallets[user_id] < price:
 
             await query.message.edit_text(
-                "â ÙÙØ¬ÙØ¯Û Ø´ÙØ§ Ú©Ø§ÙÛ ÙÛØ³Øª"
+                "❌ موجودی شما کافی نیست"
             )
 
             return
 
         user_wallets[user_id] -= price
-        save_data("balances.json", user_wallets)
 
         pending_config_user[user_id] = user_id
 
         await context.bot.send_message(
             ADMIN_ID,
             f"""
-ð Ø®Ø±ÛØ¯ Ø¬Ø¯ÛØ¯ Ø¨Ø§ Ú©ÛÙ Ù¾ÙÙ
+🛒 خرید جدید با کیف پول
 
-ð¤ {query.from_user.first_name}
+👤 {query.from_user.first_name}
 
-ð¦ {gb}
+📦 {gb}
 
-ðµ {price:,} ØªÙÙØ§Ù
+💵 {price:,} تومان
 """
         )
 
         await context.bot.send_message(
             SECOND_ADMIN_ID,
             f"""
-ð Ø®Ø±ÛØ¯ Ø¬Ø¯ÛØ¯ Ø¨Ø§ Ú©ÛÙ Ù¾ÙÙ
+🛒 خرید جدید با کیف پول
 
-ð¤ {query.from_user.first_name}
+👤 {query.from_user.first_name}
 
-ð¦ {gb}
+📦 {gb}
 
-ðµ {price:,} ØªÙÙØ§Ù
+💵 {price:,} تومان
 """
         )
 
@@ -740,7 +721,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
@@ -748,33 +729,33 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.message.edit_text(
             """
-â Ø®Ø±ÛØ¯ Ø§ÙØ¬Ø§Ù Ø´Ø¯
+✅ خرید انجام شد
 
-â³ ÙÙØªØ¸Ø± Ø§Ø±Ø³Ø§Ù Ú©Ø§ÙÙÛÚ¯ Ø¨Ø§Ø´ÛØ¯
+⏳ منتظر ارسال کانفیگ باشید
 """,
             reply_markup=keyboard
         )
 
 
-    # ØªØ³Øª Ø±Ø§ÛÚ¯Ø§Ù
+    # تست رایگان
     elif data == "free_test":
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "â Ø¯Ø± Ø­Ø§Ù Ø­Ø§Ø¶Ø± Ø§Ú©Ø§ÙØª ØªØ³Øª ÙÙØ¬ÙØ¯ ÙÛØ³Øª",
+            "❌ در حال حاضر اکانت تست موجود نیست",
             reply_markup=keyboard
         )
 
-    # Ú©Ø¯ ÙØ¯ÛÙ
+    # کد هدیه
     elif data == "gift":
 
         gift_wait[user_id] = True
@@ -783,53 +764,53 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "ð Ú©Ø¯ ÙØ¯ÛÙ ÙØ§Ø±Ø¯ Ú©ÙÛØ¯",
+            "🎁 کد هدیه وارد کنید",
             reply_markup=keyboard
         )
 
 
-    # ØªØ§ÛÛØ¯ Ú©Ø¯ ÙØ¯ÛÙ
+    # تایید کد هدیه
     elif data.startswith("gift_accept_"):
 
         target_id = int(data.replace("gift_accept_", ""))
 
-        volume = pending_gifts.get(target_id, "ÙØ§ÙØ´Ø®Øµ")
+        volume = pending_gifts.get(target_id, "نامشخص")
 
         waiting_config[query.from_user.id] = target_id
 
         await context.bot.send_message(
             chat_id=target_id,
-            text="â Ú©Ø¯ ÙØ¯ÛÙ Ø´ÙØ§ Ø¨Ø§ ÙÙÙÙÛØª ØªØ§ÛÛØ¯ Ø´Ø¯\nâ³ Ø¯Ø± Ø­Ø§Ù Ø¨Ø±Ø±Ø³Û Ø§Ø³Øª Ù ÙÙØªØ¸Ø± Ú©Ø§ÙÙÛÙÚ¯ Ø¨Ø§Ø´ÛØ¯"
+            text="✅ کد هدیه شما با موفقیت تایید شد\n⏳ در حال بررسی است و منتظر کانفینگ باشید"
         )
 
         await query.message.reply_text(
-            "ð¤ Ú©Ø§ÙÙÛÙÚ¯ Ú©Ø§Ø±Ø¨Ø± Ø±Ø§ Ø§Ø±Ø³Ø§Ù Ú©ÙÛØ¯"
+            "📤 کانفینگ کاربر را ارسال کنید"
         )
 
-        await query.answer("ØªØ§ÛÛØ¯ Ø´Ø¯")
+        await query.answer("تایید شد")
 
-    # Ø±Ø¯ Ú©Ø¯ ÙØ¯ÛÙ
+    # رد کد هدیه
     elif data.startswith("gift_reject_"):
 
         target_id = int(data.replace("gift_reject_", ""))
 
         await context.bot.send_message(
             chat_id=target_id,
-            text="â Ú©Ø¯ ÙØ¯ÛÙ Ø´ÙØ§ ØªÙØ³Ø· ÙØ¯ÛØ± Ø±Ø¯ Ø´Ø¯"
+            text="❌ کد هدیه شما توسط مدیر رد شد"
         )
 
-        await query.answer("Ø±Ø¯ Ø´Ø¯")
+        await query.answer("رد شد")
 
 
 
-    # Ù¾ÛØ§Ù ÙÙÚ¯Ø§ÙÛ
+    # پیام همگانی
     elif data == "broadcast":
 
         if user_id != ADMIN_ID:
@@ -850,7 +831,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     chat = await context.bot.get_chat(int(uid))
 
-                    username = chat.username if chat.username else "ÙØ¯Ø§Ø±Ø¯"
+                    username = chat.username if chat.username else "ندارد"
 
                     users_buttons.append([
 
@@ -866,7 +847,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     users_buttons.append([
 
                         InlineKeyboardButton(
-                            f"Ú©Ø§Ø±Ø¨Ø± | {uid}",
+                            f"کاربر | {uid}",
                             callback_data=f"pm_{uid}"
                         )
 
@@ -879,7 +860,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users_buttons.append([
 
             InlineKeyboardButton(
-                "ð¢ Ø§Ø±Ø³Ø§Ù Ù¾ÛØ§Ù Ø¨Ù Ú©Ù Ú©Ø§Ø±Ø¨Ø±Ø§Ù",
+                "📢 ارسال پیام به کل کاربران",
                 callback_data="send_all_users"
             )
 
@@ -888,7 +869,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users_buttons.append([
 
             InlineKeyboardButton(
-                "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                "🔙 بازگشت",
                 callback_data="home"
             )
 
@@ -897,7 +878,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = InlineKeyboardMarkup(users_buttons)
 
         await query.message.edit_text(
-            "ð¢ ÛÚ© Ú©Ø§Ø±Ø¨Ø± Ø§ÙØªØ®Ø§Ø¨ Ú©ÙÛØ¯ ÛØ§ Ø§Ø±Ø³Ø§Ù ÙÙÚ¯Ø§ÙÛ Ø¨Ø²ÙÛØ¯",
+            "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید",
             reply_markup=keyboard
         )
 
@@ -909,14 +890,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="broadcast"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "ð¢ Ù¾ÛØ§Ù Ø®ÙØ¯ Ø±Ø§ Ø¨Ø±Ø§Û Ú©Ù Ú©Ø§Ø±Ø¨Ø±Ø§Ù Ø§Ø±Ø³Ø§Ù Ú©ÙÛØ¯",
+            "📢 پیام خود را برای کل کاربران ارسال کنید",
             reply_markup=keyboard
         )
 
@@ -930,43 +911,43 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="broadcast"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            f"âï¸ Ù¾ÛØ§Ù Ø®ÙØ¯ Ø±Ø§ Ø¨Ø±Ø§Û Ú©Ø§Ø±Ø¨Ø± {target_id} Ø§Ø±Ø³Ø§Ù Ú©ÙÛØ¯",
+            f"✉️ پیام خود را برای کاربر {target_id} ارسال کنید",
             reply_markup=keyboard
         )
 
 
-    # ØªØ¹Ø±ÙÙ
+    # تعرفه
     elif data == "prices":
 
         text = """
-Ø³ÙØ§Ù ÙÙÚ©Ø§Ø± Ú¯Ø±Ø§ÙÛ ð
+سلام همکار گرامی 😃
 
-ð£ ÙØ± Ú¯ÛÚ¯ 190 ØªÙÙØ§Ù
+🟣 هر گیگ 190 تومان
 
 ID : @mak_11q
 
-ð¢ Ø¢ÙÙØ§ÛÙ
+🟢 آنلاین
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "ð Ø®Ø±ÛØ¯ Ø³Ø±ÙÛØ³",
+                    "🛒 خرید سرویس",
                     callback_data="buy"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
@@ -977,26 +958,26 @@ ID : @mak_11q
             reply_markup=keyboard
         )
 
-    # Ø¢ÙÙØ²Ø´
+    # آموزش
     elif data == "help":
 
         text = """
-ð Ø¢ÙÙØ²Ø´ Ø§ØªØµØ§Ù
+📚 آموزش اتصال
 
-1ï¸â£ Ø¨Ø±ÙØ§ÙÙ V2rayNG ÙØµØ¨ Ú©ÙÛØ¯
+1️⃣ برنامه V2rayNG نصب کنید
 
-2ï¸â£ Ú©Ø§ÙÙÛÚ¯ Ø±Ø§ Ú©Ù¾Û Ú©ÙÛØ¯
+2️⃣ کانفیگ را کپی کنید
 
-3ï¸â£ Ø¯Ø§Ø®Ù Ø¨Ø±ÙØ§ÙÙ Paste Ú©ÙÛØ¯
+3️⃣ داخل برنامه Paste کنید
 
-4ï¸â£ Connect Ø¨Ø²ÙÛØ¯
+4️⃣ Connect بزنید
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="home"
                 )
             ]
@@ -1012,7 +993,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
 
-    # Ø§Ø±Ø³Ø§Ù Ú©Ø§ÙÙÛÚ¯
+    # ارسال کانفیگ
     if (
         user_id == ADMIN_ID
         or user_id == SECOND_ADMIN_ID
@@ -1025,17 +1006,17 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             target_user,
             f"""
-ð Ú©Ø§ÙÙÛÚ¯ Ø´ÙØ§ Ø¢ÙØ§Ø¯Ù Ø´Ø¯
+🎉 کانفیگ شما آماده شد
 
 <code>{update.message.text}</code>
 
-ð Ø§ØªØµØ§Ù Ù¾Ø±Ø³Ø±Ø¹Øª Ù Ù¾Ø§ÛØ¯Ø§Ø±
+🚀 اتصال پرسرعت و پایدار
 """,
             parse_mode="HTML"
         )
 
         await update.message.reply_text(
-            "â Ú©Ø§ÙÙÛÚ¯ Ø§Ø±Ø³Ø§Ù Ø´Ø¯"
+            "✅ کانفیگ ارسال شد"
         )
 
         del pending_config_user[
@@ -1045,19 +1026,18 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
-    # Ú©Ø¯ ÙØ¯ÛÙ
+    # کد هدیه
     if user_id in gift_wait:
 
         code = update.message.text.strip()
 
         if user_id not in used_gifts:
             used_gifts[user_id] = []
-            save_data("gifts.json", used_gifts)
 
         if code in used_gifts[user_id]:
 
             await update.message.reply_text(
-                "â Ø´ÙØ§ ÙØ¨ÙØ§Ù Ø§Ø² Ø§ÛÙ Ú©Ø¯ ÙØ¯ÛÙ Ø§Ø³ØªÙØ§Ø¯Ù Ú©Ø±Ø¯ÙâØ§ÛØ¯"
+                "❌ شما قبلاً از این کد هدیه استفاده کرده‌اید"
             )
 
             return
@@ -1065,20 +1045,19 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if code == "mam4di":
 
             used_gifts[user_id].append(code)
-            save_data("gifts.json", used_gifts)
 
-            pending_gifts[user_id] = "1 Ú¯ÛÚ¯"
+            pending_gifts[user_id] = "1 گیگ"
 
             keyboard = InlineKeyboardMarkup([
 
                 [
                     InlineKeyboardButton(
-                        "â ØªØ§ÛÛØ¯",
+                        "✅ تایید",
                         callback_data=f"gift_accept_{user_id}"
                     ),
 
                     InlineKeyboardButton(
-                        "â Ø±Ø¯ Ú©Ø±Ø¯Ù",
+                        "❌ رد کردن",
                         callback_data=f"gift_reject_{user_id}"
                     )
                 ]
@@ -1087,28 +1066,28 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 ADMIN_ID,
                 f"""
-ð Ú©Ø¯ ÙØ¯ÛÙ Ø¬Ø¯ÛØ¯ Ø«Ø¨Øª Ø´Ø¯
+🎁 کد هدیه جدید ثبت شد
 
-ð¤ ÙØ§Ù:
+👤 نام:
 {update.effective_user.first_name}
 
-ð ÛÙØ²Ø±ÙÛÙ:
+🆔 یوزرنیم:
 @{update.effective_user.username}
 
-ð Ø¢ÛØ¯Û:
+📌 آیدی:
 {user_id}
 
-ð Ú©Ø¯ ÙØ¯ÛÙ:
+🎁 کد هدیه:
 mam4di
 
-ð¦ Ø­Ø¬Ù:
-1 Ú¯ÛÚ¯
+📦 حجم:
+1 گیگ
 """,
                 reply_markup=keyboard
             )
 
             await update.message.reply_text(
-                "â Ú©Ø¯ ÙØ¯ÛÙ Ø´ÙØ§ Ø¨Ø§ ÙÙÙÙÛØª Ø«Ø¨Øª Ø´Ø¯\nð¦ Ø­Ø¬Ù Ú©Ø¯ ÙØ¯ÛÙ Ø´ÙØ§ 1 Ú¯ÛÚ¯ ÙÛØ¨Ø§Ø´Ø¯\nâ³ Ø¨Ø¹Ø¯ ØªØ§ÛÛØ¯ ÙØ¯ÛØ± Ú©Ø§ÙÙÛÙÚ¯ Ø´ÙØ§ Ø§Ø±Ø³Ø§Ù Ø®ÙØ§ÙØ¯ Ø´Ø¯"
+                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 1 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
             )
 
             del gift_wait[user_id]
@@ -1118,20 +1097,19 @@ mam4di
         elif code == "mam4di_1k":
 
             used_gifts[user_id].append(code)
-            save_data("gifts.json", used_gifts)
 
-            pending_gifts[user_id] = "2 Ú¯ÛÚ¯"
+            pending_gifts[user_id] = "2 گیگ"
 
             keyboard = InlineKeyboardMarkup([
 
                 [
                     InlineKeyboardButton(
-                        "â ØªØ§ÛÛØ¯",
+                        "✅ تایید",
                         callback_data=f"gift_accept_{user_id}"
                     ),
 
                     InlineKeyboardButton(
-                        "â Ø±Ø¯ Ú©Ø±Ø¯Ù",
+                        "❌ رد کردن",
                         callback_data=f"gift_reject_{user_id}"
                     )
                 ]
@@ -1140,28 +1118,28 @@ mam4di
             await context.bot.send_message(
                 ADMIN_ID,
                 f"""
-ð Ú©Ø¯ ÙØ¯ÛÙ Ø¬Ø¯ÛØ¯ Ø«Ø¨Øª Ø´Ø¯
+🎁 کد هدیه جدید ثبت شد
 
-ð¤ ÙØ§Ù:
+👤 نام:
 {update.effective_user.first_name}
 
-ð ÛÙØ²Ø±ÙÛÙ:
+🆔 یوزرنیم:
 @{update.effective_user.username}
 
-ð Ø¢ÛØ¯Û:
+📌 آیدی:
 {user_id}
 
-ð Ú©Ø¯ ÙØ¯ÛÙ:
+🎁 کد هدیه:
 mam4di_1k
 
-ð¦ Ø­Ø¬Ù:
-2 Ú¯ÛÚ¯
+📦 حجم:
+2 گیگ
 """,
                 reply_markup=keyboard
             )
 
             await update.message.reply_text(
-                "â Ú©Ø¯ ÙØ¯ÛÙ Ø´ÙØ§ Ø¨Ø§ ÙÙÙÙÛØª Ø«Ø¨Øª Ø´Ø¯\nð¦ Ø­Ø¬Ù Ú©Ø¯ ÙØ¯ÛÙ Ø´ÙØ§ 2 Ú¯ÛÚ¯ ÙÛØ¨Ø§Ø´Ø¯\nâ³ Ø¨Ø¹Ø¯ ØªØ§ÛÛØ¯ ÙØ¯ÛØ± Ú©Ø§ÙÙÛÙÚ¯ Ø´ÙØ§ Ø§Ø±Ø³Ø§Ù Ø®ÙØ§ÙØ¯ Ø´Ø¯"
+                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 2 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
             )
 
             del gift_wait[user_id]
@@ -1171,14 +1149,14 @@ mam4di_1k
         else:
 
             await update.message.reply_text(
-                "â Ú©Ø¯ ÙØ¯ÛÙ ÙØ§ÙØ¹ØªØ¨Ø± Ø§Ø³Øª"
+                "❌ کد هدیه نامعتبر است"
             )
 
             return
 
 
 
-    # Ø§Ø±Ø³Ø§Ù Ú©Ø§ÙÙÛÚ¯ ØªÙØ³Ø· ÙØ¯ÛØ±
+    # ارسال کانفیگ توسط مدیر
     if user_id in waiting_config:
 
         target_user = waiting_config[user_id]
@@ -1189,14 +1167,14 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "â Ú©Ø§ÙÙÛÙÚ¯ Ø¨Ø§ ÙÙÙÙÛØª Ø§Ø±Ø³Ø§Ù Ø´Ø¯"
+            "✅ کانفینگ با موفقیت ارسال شد"
         )
 
         del waiting_config[user_id]
 
         return
 
-    # Ù¾ÛØ§Ù ÙÙÚ¯Ø§ÙÛ
+    # پیام همگانی
     if user_id in broadcast_wait:
 
         try:
@@ -1221,13 +1199,13 @@ mam4di_1k
                     pass
 
             await update.message.reply_text(
-                "â Ù¾ÛØ§Ù Ø´ÙØ§ Ø¨Ø§ ÙÙÙÙÛØª Ø¨Ø±Ø§Û Ú©Ø§Ø±Ø¨Ø±Ø§Ù Ø§Ø±Ø³Ø§Ù Ø´Ø¯"
+                "✅ پیام شما با موفقیت برای کاربران ارسال شد"
             )
 
         except:
 
             await update.message.reply_text(
-                "â ÙÛØ³Øª Ú©Ø§Ø±Ø¨Ø±Ø§Ù Ù¾ÛØ¯Ø§ ÙØ´Ø¯"
+                "❌ لیست کاربران پیدا نشد"
             )
 
         del broadcast_wait[user_id]
@@ -1236,7 +1214,7 @@ mam4di_1k
 
 
 
-    # Ù¾ÛØ§Ù Ø®ØµÙØµÛ ÙØ¯ÛØ±
+    # پیام خصوصی مدیر
     if user_id in private_message_wait:
 
         target_user = private_message_wait[user_id]
@@ -1247,7 +1225,7 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "â Ù¾ÛØ§Ù Ø´ÙØ§ Ø¨Ø§ ÙÙÙÙÛØª Ø§Ø±Ø³Ø§Ù Ø´Ø¯"
+            "✅ پیام شما با موفقیت ارسال شد"
         )
 
         del private_message_wait[user_id]
@@ -1255,7 +1233,7 @@ mam4di_1k
         return
 
 
-    # ÙØ¨ÙØº Ú©ÛÙ Ù¾ÙÙ
+    # مبلغ کیف پول
     if user_id in wallet_wait:
 
         try:
@@ -1264,7 +1242,7 @@ mam4di_1k
         except:
 
             await update.message.reply_text(
-                "â ÙÙØ· Ø¹Ø¯Ø¯ ÙØ§Ø±Ø¯ Ú©ÙÛØ¯"
+                "❌ فقط عدد وارد کنید"
             )
 
             return
@@ -1275,37 +1253,37 @@ mam4di_1k
         }
 
         text = f"""
-ð° Ø§ÙØ²Ø§ÛØ´ ÙÙØ¬ÙØ¯Û Ú©ÛÙ Ù¾ÙÙ
+💰 افزایش موجودی کیف پول
 
-ðµ ÙØ¨ÙØº:
-{amount:,} ØªÙÙØ§Ù
+💵 مبلغ:
+{amount:,} تومان
 
-ð³ Ø´ÙØ§Ø±Ù Ú©Ø§Ø±Øª:
+💳 شماره کارت:
 
 <code>{CARD_NUMBER}</code>
 
-ð¤ Ø¨Ø¹Ø¯ Ø§Ø² ÙØ§Ø±ÛØ² Ø±Ø³ÛØ¯ Ø§Ø±Ø³Ø§Ù Ú©ÙÛØ¯
+📤 بعد از واریز رسید ارسال کنید
 """
 
         keyboard = InlineKeyboardMarkup([
 
             [
                 InlineKeyboardButton(
-                    "ð Ú©Ù¾Û Ø´ÙØ§Ø±Ù Ú©Ø§Ø±Øª",
+                    "📋 کپی شماره کارت",
                     switch_inline_query_current_chat=CARD_NUMBER
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ðµ Ú©Ù¾Û ÙØ¨ÙØº",
+                    "💵 کپی مبلغ",
                     switch_inline_query_current_chat=str(amount)
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                    "🔙 بازگشت",
                     callback_data="wallet"
                 )
             ]
@@ -1333,23 +1311,23 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if info["type"] == "wallet":
 
-        txt = f"Ø´Ø§Ø±Ú Ú©ÛÙ Ù¾ÙÙ\n{info['amount']:,} ØªÙÙØ§Ù"
+        txt = f"شارژ کیف پول\n{info['amount']:,} تومان"
 
     else:
 
-        txt = f"{info['plan']} | {info['amount']:,} ØªÙÙØ§Ù"
+        txt = f"{info['plan']} | {info['amount']:,} تومان"
 
     caption = f"""
-ð¥ Ø±Ø³ÛØ¯ Ø¬Ø¯ÛØ¯
+📥 رسید جدید
 
-ð¤ {update.effective_user.first_name}
+👤 {update.effective_user.first_name}
 
-ð @{update.effective_user.username}
+🆔 @{update.effective_user.username}
 
-ð ID:
+📌 ID:
 {user_id}
 
-ð Ø§Ø·ÙØ§Ø¹Ø§Øª:
+🛒 اطلاعات:
 {txt}
 """
 
@@ -1357,12 +1335,12 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         [
             InlineKeyboardButton(
-                "â ØªØ§ÛÛØ¯",
+                "✅ تایید",
                 callback_data=f"accept_{user_id}"
             ),
 
             InlineKeyboardButton(
-                "â Ø±Ø¯",
+                "❌ رد",
                 callback_data=f"reject_{user_id}"
             )
         ]
@@ -1386,14 +1364,14 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         [
             InlineKeyboardButton(
-                "ð Ø¨Ø§Ø²Ú¯Ø´Øª",
+                "🔙 بازگشت",
                 callback_data="home"
             )
         ]
     ])
 
     await update.message.reply_text(
-        "â Ø±Ø³ÛØ¯ Ø´ÙØ§ Ø«Ø¨Øª Ø´Ø¯\nâ³ ÙÙØªØ¸Ø± ØªØ§ÛÛØ¯ ÙØ¯ÛØ±ÛØª Ø¨Ø§Ø´ÛØ¯",
+        "✅ رسید شما ثبت شد\n⏳ منتظر تایید مدیریت باشید",
         reply_markup=keyboard2
     )
 
