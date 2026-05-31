@@ -185,6 +185,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
 
+    try:
+        with open("users.txt", "a+", encoding="utf-8") as f:
+
+            f.seek(0)
+
+            users = f.read().splitlines()
+
+            if str(user_id) not in users:
+
+                f.write(f"{user_id}\n")
+
+    except:
+        pass
+
     if user_id not in user_wallets:
         user_wallets[user_id] = 0
 
