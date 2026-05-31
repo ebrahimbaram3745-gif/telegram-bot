@@ -1,4 +1,4 @@
-import so
+import os
 import json
 
 def load_data(filename):
