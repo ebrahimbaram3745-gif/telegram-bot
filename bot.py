@@ -53,6 +53,7 @@ user_wallets = {}
 
 gift_wait = {}
 used_gifts = {}
+pending_gifts = {}
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
@@ -750,6 +751,34 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
+
+    # تایید کد هدیه
+    elif data.startswith("gift_accept_"):
+
+        target_id = int(data.replace("gift_accept_", ""))
+
+        volume = pending_gifts.get(target_id, "نامشخص")
+
+        await context.bot.send_message(
+            chat_id=target_id,
+            text="✅ کد هدیه شما با موفقیت تایید شد\n⏳ در حال بررسی است و منتظر کانفینگ باشید"
+        )
+
+        await query.answer("تایید شد")
+
+    # رد کد هدیه
+    elif data.startswith("gift_reject_"):
+
+        target_id = int(data.replace("gift_reject_", ""))
+
+        await context.bot.send_message(
+            chat_id=target_id,
+            text="❌ کد هدیه شما توسط مدیر رد شد"
+        )
+
+        await query.answer("رد شد")
+
+
     # تعرفه
     elif data == "prices":
 
@@ -873,24 +902,44 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             used_gifts[user_id].append(code)
 
+            pending_gifts[user_id] = "1 گیگ"
+
+            keyboard = InlineKeyboardMarkup([
+
+                [
+                    InlineKeyboardButton(
+                        "✅ تایید",
+                        callback_data=f"gift_accept_{user_id}"
+                    ),
+
+                    InlineKeyboardButton(
+                        "❌ رد کردن",
+                        callback_data=f"gift_reject_{user_id}"
+                    )
+                ]
+            ])
+
             await context.bot.send_message(
                 ADMIN_ID,
                 f"""
 🎁 کد هدیه جدید ثبت شد
 
-👤 {update.effective_user.first_name}
+👤 نام:
+{update.effective_user.first_name}
 
-🆔 @{update.effective_user.username}
+🆔 یوزرنیم:
+@{update.effective_user.username}
 
-📌 ID:
+📌 آیدی:
 {user_id}
 
-🎁 کد:
+🎁 کد هدیه:
 mam4di
 
 📦 حجم:
 1 گیگ
-"""
+""",
+                reply_markup=keyboard
             )
 
             await update.message.reply_text(
@@ -905,24 +954,44 @@ mam4di
 
             used_gifts[user_id].append(code)
 
+            pending_gifts[user_id] = "2 گیگ"
+
+            keyboard = InlineKeyboardMarkup([
+
+                [
+                    InlineKeyboardButton(
+                        "✅ تایید",
+                        callback_data=f"gift_accept_{user_id}"
+                    ),
+
+                    InlineKeyboardButton(
+                        "❌ رد کردن",
+                        callback_data=f"gift_reject_{user_id}"
+                    )
+                ]
+            ])
+
             await context.bot.send_message(
                 ADMIN_ID,
                 f"""
 🎁 کد هدیه جدید ثبت شد
 
-👤 {update.effective_user.first_name}
+👤 نام:
+{update.effective_user.first_name}
 
-🆔 @{update.effective_user.username}
+🆔 یوزرنیم:
+@{update.effective_user.username}
 
-📌 ID:
+📌 آیدی:
 {user_id}
 
-🎁 کد:
+🎁 کد هدیه:
 mam4di_1k
 
 📦 حجم:
 2 گیگ
-"""
+""",
+                reply_markup=keyboard
             )
 
             await update.message.reply_text(
