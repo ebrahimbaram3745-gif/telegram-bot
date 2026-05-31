@@ -56,6 +56,7 @@ used_gifts = {}
 pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
+private_message_wait = {}
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
@@ -816,6 +817,56 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
+        users_buttons = []
+
+        try:
+
+            with open("users.txt", "r", encoding="utf-8") as f:
+
+                users = f.read().splitlines()
+
+            for uid in users[:20]:
+
+                users_buttons.append([
+
+                    InlineKeyboardButton(
+                        f"👤 {uid}",
+                        callback_data=f"pm_{uid}"
+                    )
+
+                ])
+
+        except:
+
+            pass
+
+        users_buttons.append([
+
+            InlineKeyboardButton(
+                "📢 ارسال پیام به کل کاربران",
+                callback_data="send_all_users"
+            )
+
+        ])
+
+        users_buttons.append([
+
+            InlineKeyboardButton(
+                "🔙 بازگشت",
+                callback_data="home"
+            )
+
+        ])
+
+        keyboard = InlineKeyboardMarkup(users_buttons)
+
+        await query.message.edit_text(
+            "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید",
+            reply_markup=keyboard
+        )
+
+    elif data == "send_all_users":
+
         broadcast_wait[user_id] = True
 
         keyboard = InlineKeyboardMarkup([
@@ -823,13 +874,34 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [
                 InlineKeyboardButton(
                     "🔙 بازگشت",
-                    callback_data="home"
+                    callback_data="broadcast"
                 )
             ]
         ])
 
         await query.message.edit_text(
-            "📢 پیام خود را برای کاربران ارسال کنید",
+            "📢 پیام خود را برای کل کاربران ارسال کنید",
+            reply_markup=keyboard
+        )
+
+    elif data.startswith("pm_"):
+
+        target_id = int(data.replace("pm_", ""))
+
+        private_message_wait[user_id] = target_id
+
+        keyboard = InlineKeyboardMarkup([
+
+            [
+                InlineKeyboardButton(
+                    "🔙 بازگشت",
+                    callback_data="broadcast"
+                )
+            ]
+        ])
+
+        await query.message.edit_text(
+            f"✉️ پیام خود را برای کاربر {target_id} ارسال کنید",
             reply_markup=keyboard
         )
 
@@ -1120,6 +1192,26 @@ mam4di_1k
             )
 
         del broadcast_wait[user_id]
+
+        return
+
+
+
+    # پیام خصوصی مدیر
+    if user_id in private_message_wait:
+
+        target_user = private_message_wait[user_id]
+
+        await context.bot.send_message(
+            chat_id=target_user,
+            text=update.message.text
+        )
+
+        await update.message.reply_text(
+            "✅ پیام شما با موفقیت ارسال شد"
+        )
+
+        del private_message_wait[user_id]
 
         return
 
