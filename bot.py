@@ -62,10 +62,10 @@ CARD_NUMBER = "6219861449318822"
 waiting_receipt = {}
 wallet_wait = {}
 pending_config_user = {}
-user_wallets = {}
+user_wallets = load_data("balances.json")
 
 gift_wait = {}
-used_gifts = {}
+used_gifts = load_data("gifts.json")
 pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
