@@ -1169,11 +1169,13 @@ mam4di_1k
 
         else:
 
-            await update.message.reply_text(
-                "❌ کد هدیه نامعتبر است"
-            )
+    await update.message.reply_text(
+        "❌ کد هدیه نامعتبر است"
+    )
 
-            return
+    del gift_wait[user_id]
+
+    return
 
 
 
