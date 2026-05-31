@@ -907,23 +907,45 @@ users_buttons.append([
         keyboard = InlineKeyboardMarkup(users_buttons)
 
         await query.message.edit_text(
-            "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید",
-            reply_markup=keyboard
-        )
+    "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید",
+    reply_markup=keyboard
+)
 
-    elif data == "send_all_users":
+elif data == "find_user":
 
-        broadcast_wait[user_id] = True
+    find_user_wait[user_id] = True
 
-        keyboard = InlineKeyboardMarkup([
+    keyboard = InlineKeyboardMarkup([
 
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="broadcast"
-                )
-            ]
-        ])
+        [
+            InlineKeyboardButton(
+                "🔙 بازگشت",
+                callback_data="broadcast"
+            )
+        ]
+
+    ])
+
+    await query.message.edit_text(
+        "🆔 آیدی عددی کاربر را ارسال کنید",
+        reply_markup=keyboard
+    )
+
+    return
+
+elif data == "send_all_users":
+
+    broadcast_wait[user_id] = True
+
+    keyboard = InlineKeyboardMarkup([
+
+        [
+            InlineKeyboardButton(
+                "🔙 بازگشت",
+                callback_data="broadcast"
+            )
+        ]
+    ])
 
         await query.message.edit_text(
             "📢 پیام خود را برای کل کاربران ارسال کنید",
