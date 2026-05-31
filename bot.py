@@ -877,18 +877,21 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         users_buttons.append([
 
-            InlineKeyboardButton(
-                "📢 ارسال پیام به کل کاربران",
-                callback_data="send_all_users"
-            )
+    InlineKeyboardButton(
+        "📢 ارسال پیام به کل کاربران",
+        callback_data="send_all_users"
+    )
 
-        ])
-        
-            InlineKeyboardButton(
-                "🔍 جستجوی کاربر",
-                callback_data="find_user"
-            )
-         ])
+])
+
+users_buttons.append([
+
+    InlineKeyboardButton(
+        "🔍 جستجوی کاربر",
+        callback_data="find_user"
+    )
+
+])
         
         users_buttons.append([
 
