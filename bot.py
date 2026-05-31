@@ -70,6 +70,8 @@ pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
+find_user_wait = {}
+send_found_user_wait = {}
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
