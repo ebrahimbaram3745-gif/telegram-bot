@@ -883,7 +883,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         ])
-
+        
+            InlineKeyboardButton(
+                "🔍 جستجوی کاربر",
+                callback_data="find_user"
+            )
+         ])
+        
         users_buttons.append([
 
             InlineKeyboardButton(
