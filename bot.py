@@ -5,9 +5,9 @@ from threading import Thread
 
 app_flask = Flask('')
 
-@app_flask.route('/')
+@app_flask.route('/', methods=['GET', 'HEAD'])
 def home():
-    return "Bot is running"
+    return "Bot is running!", 200
 
 def run():
     port = int(os.environ.get("PORT", 10000))
