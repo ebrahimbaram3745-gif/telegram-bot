@@ -1,8 +1,5 @@
 import os
 import json
-import logging
-
-logging.basicConfig(level=logging.INFO)
 
 def load_data(filename):
     if not os.path.exists(filename):
@@ -50,6 +47,7 @@ from telegram.ext import (
     filters
 )
 
+import os
 TOKEN = os.getenv("BOT_TOKEN")
 
 CHANNEL_USERNAME = "Pokemon_VPN"
@@ -72,7 +70,6 @@ pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
-banned_users = load_data("banned.json")
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
@@ -199,15 +196,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-        user_id = str(update.effective_user.id)
+        return
 
-        if user_id in banned_users:
-            await update.message.reply_text(
-            "❌ شما از ربات مسدود شده‌اید"
-                )
-            return
-
-        user_id = update.effective_user.id
+    user_id = update.effective_user.id
 
     try:
         with open("users.txt", "a+", encoding="utf-8") as f:
@@ -1440,49 +1431,6 @@ def main():
 
     print("Bot Started...")
 
-    async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-        admin_id = update.effective_user.id
-
-        if admin_id not in [ADMIN_ID, SECOND_ADMIN_ID]:
-            return
-
-        if not context.args:
-            await update.message.reply_text("آیدی کاربر را وارد کنید")
-            return
-
-        user_id = context.args[0]
-
-        banned_users[user_id] = True
-
-        save_data("banned.json", banned_users)
-
-        await update.message.reply_text("✅ کاربر بن شد")
-
-
-    async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-        admin_id = update.effective_user.id
-
-        if admin_id not in [ADMIN_ID, SECOND_ADMIN_ID]:
-            return
-
-        if not context.args:
-            await update.message.reply_text("آیدی کاربر را وارد کنید")
-            return
-
-        user_id = context.args[0]
-
-        if user_id in banned_users:
-            del banned_users[user_id]
-
-        save_data("banned.json", banned_users)
-
-        await update.message.reply_text("✅ کاربر آن‌بن شد")
-
-    app.add_handler(CommandHandler("ban", ban))
-    app.add_handler(CommandHandler("unban", unban))
-  
     app.run_polling()
 
 
