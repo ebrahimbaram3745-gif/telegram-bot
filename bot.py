@@ -197,15 +197,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-            user_id = str(update.effective_user.id)
+        user_id = str(update.effective_user.id)
 
-            if user_id in banned_users:
-                await update.message.reply_text(
+        if user_id in banned_users:
+            await update.message.reply_text(
             "❌ شما از ربات مسدود شده‌اید"
                 )
-                return
+            return
 
-    user_id = update.effective_user.id
+        user_id = update.effective_user.id
 
     try:
         with open("users.txt", "a+", encoding="utf-8") as f:
