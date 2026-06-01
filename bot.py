@@ -215,8 +215,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     if user_id not in user_wallets:
-    user_wallets[user_id] = 0
-    save_data("balances.json", user_wallets)
+        user_wallets[user_id] = 0
+        save_data("balances.json", user_wallets)
 
     text = """
 ✨ به Pokémon VPN خوش اومدی
