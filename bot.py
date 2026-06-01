@@ -242,8 +242,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
 
     if user_id not in user_wallets:
-    user_wallets[user_id] = 0
-    save_data("balances.json", user_wallets)
+        user_wallets[user_id] = 0
+        save_data("balances.json", user_wallets)
 
     # تایید رسید
     if data.startswith("accept_"):
