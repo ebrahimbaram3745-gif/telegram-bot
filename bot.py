@@ -2,6 +2,8 @@ import os
 import json
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 def load_data(filename):
     if not os.path.exists(filename):
         with open(filename, "w", encoding="utf-8") as f:
@@ -48,7 +50,6 @@ from telegram.ext import (
     filters
 )
 
-import os
 TOKEN = os.getenv("BOT_TOKEN")
 
 CHANNEL_USERNAME = "Pokemon_VPN"
