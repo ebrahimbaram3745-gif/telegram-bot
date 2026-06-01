@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 
 def load_data(filename):
     if not os.path.exists(filename):
