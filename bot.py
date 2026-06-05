@@ -1152,6 +1152,49 @@ ID : @mak_11q
         )
 
 
+    elif data.startswith("walletpay_card_"):
+
+        amount = int(data.replace("walletpay_card_", ""))
+
+        waiting_receipt[user_id] = {"type":"wallet","amount":amount}
+
+        await query.message.edit_text(
+f"""💳 فاکتور شارژ کیف پول
+
+💰 مبلغ:
+{amount:,} تومان
+
+شماره کارت:
+6037990000000000
+
+پس از پرداخت عکس رسید را ارسال کنید."""
+        )
+
+    elif data.startswith("walletpay_trx_"):
+
+        amount = int(data.replace("walletpay_trx_", ""))
+
+        waiting_receipt[user_id] = {"type":"wallet","amount":amount}
+
+        await query.message.edit_text(
+f"""💎 فاکتور پرداخت ارزی
+
+💳 معادل ریالی:
+{amount:,} تومان
+
+💸 مبلغ ارزی قابل پرداخت:
+{amount} TRX
+
+👇 آدرس کیف پول (برای کپی کلیک کنید):
+فعلاً ندارد
+
+⚠️ توجه: دقیقاً مبلغ ذکر شده را واریز کنید.
+
+✅ پس از واریز، عکس رسید بفرستید"""
+        )
+
+
+
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
@@ -1322,6 +1365,33 @@ mam4di_1k
 
             return
 
+
+
+
+    # شارژ کیف پول
+    if user_id in wallet_wait:
+
+        try:
+            amount = int(update.message.text.replace(",", ""))
+
+            wallet_amount[user_id] = amount
+            del wallet_wait[user_id]
+
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"walletpay_card_{amount}")],
+                [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"walletpay_trx_{amount}")],
+                [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
+            ])
+
+            await update.message.reply_text(
+                "روش پرداخت را انتخاب کنید",
+                reply_markup=keyboard
+            )
+            return
+
+        except:
+            await update.message.reply_text("❌ مبلغ معتبر وارد کنید")
+            return
 
 
     # ارسال کانفیگ توسط مدیر
