@@ -1403,6 +1403,21 @@ mam4di_1k
             "amount": amount
         }
 
+        wallet_wait[user_id] = amount
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"wallet_card_{amount}")],
+            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"wallet_trx_{amount}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
+        ])
+
+        await update.message.reply_text(
+            "💳 روش پرداخت را انتخاب کنید",
+            reply_markup=keyboard
+        )
+
+        return
+
         text = f"""
 💰 افزایش موجودی کیف پول
 
