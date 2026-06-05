@@ -1240,7 +1240,8 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
 
-    if str(user_id) in banned_users:
+    if user_id in banned_users or str(user_id) in banned_users:
+        return
         await update.message.reply_text("🚫 شما توسط مدیر بن شده‌اید.")
         return
 
