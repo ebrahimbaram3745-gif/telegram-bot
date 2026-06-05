@@ -1,4 +1,7 @@
-﻿import os
+﻿import
+def is_banned(user_id):
+    return str(user_id) in banned_users
+ os
 import json
 import requests
 
