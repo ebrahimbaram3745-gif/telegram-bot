@@ -1042,6 +1042,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
         users_buttons.append([
+            InlineKeyboardButton(
+                "👤 مدیریت کاربر",
+                callback_data="user_manage"
+            )
+        ])
+
+        users_buttons.append([
 
             InlineKeyboardButton(
                 "📢 ارسال پیام به کل کاربران",
@@ -1065,6 +1072,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📢 یک کاربر انتخاب کنید یا ارسال همگانی بزنید",
             reply_markup=keyboard
         )
+
+    elif data == "user_manage":
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🚫 بن کردن کاربر", callback_data="ban_user")],
+            [InlineKeyboardButton("✅ آن بن کردن کاربر", callback_data="unban_user")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="broadcast")]
+        ])
+
+        await query.message.edit_text("👤 مدیریت کاربر", reply_markup=keyboard)
 
     elif data == "send_all_users":
 
