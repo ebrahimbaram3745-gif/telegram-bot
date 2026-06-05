@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import requests
 
@@ -1384,7 +1384,64 @@ mam4di_1k
         return
 
 
-    # مبلغ کیف پول
+    
+    elif data.startswith("wallet_card_"):
+        amount = int(data.replace("wallet_card_", ""))
+
+        text = f"""
+💰 افزایش موجودی کیف پول
+
+💵 مبلغ:
+{amount:,} تومان
+
+💳 شماره کارت:
+
+<code>{CARD_NUMBER}</code>
+
+📤 بعد از واریز رسید ارسال کنید
+"""
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📋 کپی شماره کارت", switch_inline_query_current_chat=CARD_NUMBER)],
+            [InlineKeyboardButton("💵 کپی مبلغ", switch_inline_query_current_chat=str(amount))],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
+        ])
+
+        await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
+
+    elif data.startswith("wallet_trx_"):
+        amount = int(data.replace("wallet_trx_", ""))
+        trx_amount = round(amount / 5000, 2)
+
+        text = f"""
+💎 فاکتور پرداخت ارزی
+
+💳 معادل ریالی:
+{amount:,} تومان
+
+💸 مبلغ ارزی قابل پرداخت:
+{trx_amount} TRX
+
+👇 آدرس کیف پول (برای کپی کلیک کنید):
+
+فعلاً ندارد
+
+⚠️ توجه: دقیقاً مبلغ ذکر شده را واریز کنید و شبکه انتقال را به درستی انتخاب کنید.
+
+✅ پس از واریز، عکس رسید بفرستید
+"""
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📋 کپی آدرس", switch_inline_query_current_chat="فعلاً ندارد")],
+            [InlineKeyboardButton("💎 کپی مبلغ TRX", switch_inline_query_current_chat=str(trx_amount))],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
+        ])
+
+        await query.message.edit_text(text, reply_markup=keyboard)
+
+
+
+# مبلغ کیف پول
     if user_id in wallet_wait:
 
         try:
