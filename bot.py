@@ -666,6 +666,56 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     
+    
+    elif data.startswith("card_eco_"):
+        gb = data.replace("card_eco_", "")
+        price = eco_prices[gb]
+        waiting_receipt[user_id] = {"type":"buy","plan":gb,"amount":price}
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💰 خرید از کیف پول", callback_data=f"buywallet_eco_{gb}")],
+            [InlineKeyboardButton("📋 کپی شماره کارت", switch_inline_query_current_chat=CARD_NUMBER)],
+            [InlineKeyboardButton("💵 کپی مبلغ", switch_inline_query_current_chat=str(price))],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="eco")]
+        ])
+        await query.message.edit_text(f"""🇩🇪 Economic Plan
+
+📦 حجم:
+{gb}
+
+💵 مبلغ:
+{price:,} تومان
+
+💳 شماره کارت:
+
+<code>{CARD_NUMBER}</code>
+
+📤 بعد از پرداخت رسید ارسال کنید""", parse_mode="HTML", reply_markup=keyboard)
+
+    elif data.startswith("card_vip_"):
+        gb = data.replace("card_vip_", "")
+        price = vip_prices[gb]
+        waiting_receipt[user_id] = {"type":"buy","plan":gb,"amount":price}
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💰 خرید از کیف پول", callback_data=f"buywallet_vip_{gb}")],
+            [InlineKeyboardButton("📋 کپی شماره کارت", switch_inline_query_current_chat=CARD_NUMBER)],
+            [InlineKeyboardButton("💵 کپی مبلغ", switch_inline_query_current_chat=str(price))],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="vip")]
+        ])
+        await query.message.edit_text(f"""💎 VIP Plan
+
+📦 حجم:
+{gb}
+
+💵 مبلغ:
+{price:,} تومان
+
+💳 شماره کارت:
+
+<code>{CARD_NUMBER}</code>
+
+📤 بعد از پرداخت رسید ارسال کنید""", parse_mode="HTML", reply_markup=keyboard)
+
+
     elif data.startswith("trx_eco_"):
         gb = data.replace("trx_eco_", "")
         price = eco_prices[gb]
