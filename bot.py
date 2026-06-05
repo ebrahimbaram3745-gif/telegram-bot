@@ -74,6 +74,7 @@ private_message_wait = {}
 
 trx_wait = {}
 trx_payment_data = {}
+payment_select = {}
 
 def get_trx_price_toman():
     try:
@@ -518,11 +519,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         gb = data.replace("eco_", "")
         price = eco_prices[gb]
 
-        waiting_receipt[user_id] = {
-            "type": "buy",
-            "plan": gb,
-            "amount": price
-        }
+        payment_select[user_id] = ("eco", gb)
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"card_eco_{gb}")],
+            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="eco")]
+        ])
+
+        await query.message.edit_text("💳 روش پرداخت را انتخاب کنید", reply_markup=keyboard)
+        return
 
         text = f"""
 🇩🇪 Economic Plan
@@ -589,11 +595,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         gb = data.replace("vip_", "")
         price = vip_prices[gb]
 
-        waiting_receipt[user_id] = {
-            "type": "buy",
-            "plan": gb,
-            "amount": price
-        }
+        payment_select[user_id] = ("eco", gb)
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"card_eco_{gb}")],
+            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="eco")]
+        ])
+
+        await query.message.edit_text("💳 روش پرداخت را انتخاب کنید", reply_markup=keyboard)
+        return
 
         text = f"""
 💎 VIP Plan
