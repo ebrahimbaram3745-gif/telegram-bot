@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import requests
 
@@ -75,6 +75,7 @@ private_message_wait = {}
 trx_wait = {}
 trx_payment_data = {}
 payment_select = {}
+wallet_amount = {}
 
 def get_trx_price_toman():
     try:
@@ -419,7 +420,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "➕ افزایش موجودی",
+                    "➕ شارژ کیف پول",
                     callback_data="charge"
                 )
             ],
@@ -453,7 +454,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         await query.message.edit_text(
-            "💵 مبلغ موردنظر را ارسال کنید",
+            "مبلغ مورد نظر را وارد کنید",
             reply_markup=keyboard
         )
 
@@ -1407,7 +1408,7 @@ mam4di_1k
             [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
         ])
 
-        waiting_receipt[user_id] = {"type":"wallet_card","amount":amount}
+        waiting_receipt[user_id] = {"type":"wallet","amount":amount}
         await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
 
     elif data.startswith("wallet_trx_"):
@@ -1438,7 +1439,7 @@ mam4di_1k
             [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
         ])
 
-        waiting_receipt[user_id] = {"type":"wallet_trx","amount":amount,"trx":trx_amount}
+        waiting_receipt[user_id] = {"type":"wallet","amount":amount,"trx":trx_amount}
         await query.message.edit_text(text, reply_markup=keyboard)
 
 
