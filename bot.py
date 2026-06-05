@@ -84,6 +84,10 @@ trx_payment_data = {}
 payment_select = {}
 wallet_amount = {}
 
+banned_users = load_data("banned_users.json")
+ban_wait = {}
+unban_wait = {}
+
 def get_trx_price_toman():
     try:
         r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=tron&vs_currencies=usd", timeout=10).json()
@@ -264,6 +268,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     user_id = query.from_user.id
+
+    if data == "ban_user":
+        ban_wait[user_id] = True
+        await query.message.reply_text("آیدی عددی کاربر را وارد کنید:")
+        return
+
+    if data == "unban_user":
+        unban_wait[user_id] = True
+        await query.message.reply_text("آیدی عددی کاربر را وارد کنید:")
+        return
 
     if user_id not in user_wallets:
         user_wallets[user_id] = 0
@@ -1205,6 +1219,40 @@ f"""💎 فاکتور پرداخت ارزی
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
+
+    if user_id in banned_users:
+        await update.message.reply_text("🚫 شما توسط مدیر بن شده‌اید.")
+        return
+
+    if user_id in ban_wait:
+        try:
+            target=int(update.message.text)
+            banned_users[str(target)] = True
+            save_data("banned_users.json", banned_users)
+            del ban_wait[user_id]
+            await update.message.reply_text(f"✅ کاربر {target} بن شد.")
+            try:
+                await context.bot.send_message(target,"🚫 شما توسط مدیر بن شدید.")
+            except:
+                pass
+        except:
+            await update.message.reply_text("آیدی معتبر نیست.")
+        return
+
+    if user_id in unban_wait:
+        try:
+            target=int(update.message.text)
+            banned_users.pop(str(target),None)
+            save_data("banned_users.json", banned_users)
+            del unban_wait[user_id]
+            await update.message.reply_text(f"✅ کاربر {target} آن‌بن شد.")
+            try:
+                await context.bot.send_message(target,"✅ شما توسط مدیر آن‌بن شدید.")
+            except:
+                pass
+        except:
+            await update.message.reply_text("آیدی معتبر نیست.")
+        return
 
     # ارسال کانفیگ
     if (
