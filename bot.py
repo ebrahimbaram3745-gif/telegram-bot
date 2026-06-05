@@ -73,6 +73,7 @@ broadcast_wait = {}
 private_message_wait = {}
 
 trx_wait = {}
+trx_payment_data = {}
 
 def get_trx_price_toman():
     try:
@@ -542,6 +543,12 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = InlineKeyboardMarkup([
 
             [
+                InlineKeyboardButton("💳 کارت به کارت", callback_data="noop")
+            ],
+            [
+                InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")
+            ],
+            [
                 InlineKeyboardButton(
                     "💰 خرید از کیف پول",
                     callback_data=f"buywallet_eco_{gb}"
@@ -607,6 +614,12 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = InlineKeyboardMarkup([
 
             [
+                InlineKeyboardButton("💳 کارت به کارت", callback_data="noop")
+            ],
+            [
+                InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_vip_{gb}")
+            ],
+            [
                 InlineKeyboardButton(
                     "💰 خرید از کیف پول",
                     callback_data=f"buywallet_vip_{gb}"
@@ -641,7 +654,46 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard
         )
 
-    # خرید با کیف پول اقتصادی
+    
+    elif data.startswith("trx_eco_"):
+        gb = data.replace("trx_eco_", "")
+        price = eco_prices[gb]
+        trx = round(price / get_trx_price_toman(), 2)
+        await query.message.edit_text(f"""💎 فاکتور پرداخت ارزی
+
+💳 معادل ریالی:
+{price:,} تومان
+
+💸 مبلغ ارزی قابل پرداخت:
+💰 {trx} TRX
+
+👇 آدرس کیف پول (برای کپی کلیک کنید):
+فعلا ندارد
+
+⚠️ توجه: دقیقاً مبلغ ذکر شده را واریز کنید و شبکه انتقال را به درستی انتخاب کنید.
+
+✅ پس از واریز، عکس رسید بفرستید""")
+
+    elif data.startswith("trx_vip_"):
+        gb = data.replace("trx_vip_", "")
+        price = vip_prices[gb]
+        trx = round(price / get_trx_price_toman(), 2)
+        await query.message.edit_text(f"""💎 فاکتور پرداخت ارزی
+
+💳 معادل ریالی:
+{price:,} تومان
+
+💸 مبلغ ارزی قابل پرداخت:
+💰 {trx} TRX
+
+👇 آدرس کیف پول (برای کپی کلیک کنید):
+فعلا ندارد
+
+⚠️ توجه: دقیقاً مبلغ ذکر شده را واریز کنید و شبکه انتقال را به درستی انتخاب کنید.
+
+✅ پس از واریز، عکس رسید بفرستید""")
+
+# خرید با کیف پول اقتصادی
     elif data.startswith("buywallet_eco_"):
 
         gb = data.replace("buywallet_eco_", "")
