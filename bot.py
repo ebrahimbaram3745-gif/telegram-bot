@@ -1,4 +1,4 @@
-﻿import
+import
 def is_banned(user_id):
     return str(user_id) in banned_users
  os
