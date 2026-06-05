@@ -1407,6 +1407,7 @@ mam4di_1k
             [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
         ])
 
+        waiting_receipt[user_id] = {"type":"wallet_card","amount":amount}
         await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
 
     elif data.startswith("wallet_trx_"):
@@ -1437,6 +1438,7 @@ mam4di_1k
             [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
         ])
 
+        waiting_receipt[user_id] = {"type":"wallet_trx","amount":amount,"trx":trx_amount}
         await query.message.edit_text(text, reply_markup=keyboard)
 
 
@@ -1454,11 +1456,6 @@ mam4di_1k
             )
 
             return
-
-        waiting_receipt[user_id] = {
-            "type": "wallet",
-            "amount": amount
-        }
 
         wallet_wait[user_id] = amount
 
