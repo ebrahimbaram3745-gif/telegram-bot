@@ -89,21 +89,21 @@ def get_trx_price_toman():
 
 
 eco_prices = {
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 1G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 50T": 50000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 2G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 95T": 95000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 3G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 140T": 140000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 4G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 190T": 190000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 5G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 235T": 235000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 6G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 287T": 287000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 7G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 340T": 340000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 8G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 387T": 387000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 9G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 438T": 438000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 10G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 490T": 490000,
+    "📊 1G | ⏳ 30D | 💰 50T": 50000,
+    "📊 2G | ⏳ 30D | 💰 95T": 95000,
+    "📊 3G | ⏳ 30D | 💰 140T": 140000,
+    "📊 4G | ⏳ 30D | 💰 190T": 190000,
+    "📊 5G | ⏳ 30D | 💰 235T": 235000,
+    "📊 6G | ⏳ 30D | 💰 287T": 287000,
+    "📊 7G | ⏳ 30D | 💰 340T": 340000,
+    "📊 8G | ⏳ 30D | 💰 387T": 387000,
+    "📊 9G | ⏳ 30D | 💰 438T": 438000,
+    "📊 10G | ⏳ 30D | 💰 490T": 490000,
 }
 
 vip_prices = {
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 70G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 30D | 💰 690T": 690000,
-    "<tg-emoji emoji-id="5839123599302076196">📊</tg-emoji> 320G | <tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> 180D | 💰 1390T": 1390000,
+    "📊 70G | ⏳ 30D | 💰 690T": 690000,
+    "📊 320G | ⏳ 180D | 💰 1390T": 1390000,
 }
 
 
@@ -156,7 +156,7 @@ def home_keys():
             ),
 
             InlineKeyboardButton(
-                "<tg-emoji emoji-id="5323422405010414980">🆓</tg-emoji> تست اکانت رایگان",
+                "🆓 تست اکانت رایگان",
                 callback_data="free_test"
             )
         ],
@@ -202,7 +202,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> عضو شدم",
+                    "✅ عضو شدم",
                     callback_data="check_join"
                 )
             ]
@@ -279,7 +279,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 target_user,
                 f"""
-<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> کیف پول شما شارژ شد
+✅ کیف پول شما شارژ شد
 
 💰 مبلغ:
 {amount:,} تومان
@@ -290,7 +290,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             await query.answer(
-                "کیف پول شارژ شد <tg-emoji emoji-id="5834690072066137860">✅</tg-emoji>",
+                "کیف پول شارژ شد ✅",
                 show_alert=True
             )
 
@@ -301,14 +301,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 target_user,
                 """
-<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> پرداخت شما تایید شد
+✅ پرداخت شما تایید شد
 
-<tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> لطفا منتظر ارسال کانفیگ باشید
+⏳ لطفا منتظر ارسال کانفیگ باشید
 """
             )
 
             await query.answer(
-                "تایید شد <tg-emoji emoji-id="5834690072066137860">✅</tg-emoji>",
+                "تایید شد ✅",
                 show_alert=True
             )
 
@@ -386,7 +386,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
-                    "<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> پلن VIP",
+                    "💎 پلن VIP",
                     callback_data="vip"
                 )
             ],
@@ -510,7 +510,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
 
         await query.message.edit_text(
-            "<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> پلن های VIP",
+            "💎 پلن های VIP",
             reply_markup=InlineKeyboardMarkup(keys)
         )
 
@@ -526,7 +526,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"card_eco_{gb}")],
-            [InlineKeyboardButton("<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> پرداخت ارزی", callback_data=f"trx_eco_{gb}")],
+            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="eco")]
         ])
 
@@ -555,7 +555,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("💳 کارت به کارت", callback_data="noop")
             ],
             [
-                InlineKeyboardButton("<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> پرداخت ارزی", callback_data=f"trx_eco_{gb}")
+                InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")
             ],
             [
                 InlineKeyboardButton(
@@ -604,7 +604,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"card_eco_{gb}")],
-            [InlineKeyboardButton("<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> پرداخت ارزی", callback_data=f"trx_eco_{gb}")],
+            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="eco")]
         ])
 
@@ -612,7 +612,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
         text = f"""
-<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> VIP Plan
+💎 VIP Plan
 
 📦 حجم:
 {gb}
@@ -633,7 +633,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("💳 کارت به کارت", callback_data="noop")
             ],
             [
-                InlineKeyboardButton("<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> پرداخت ارزی", callback_data=f"trx_vip_{gb}")
+                InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_vip_{gb}")
             ],
             [
                 InlineKeyboardButton(
@@ -710,7 +710,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("💵 کپی مبلغ", switch_inline_query_current_chat=str(price))],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="vip")]
         ])
-        await query.message.edit_text(f"""<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> VIP Plan
+        await query.message.edit_text(f"""💎 VIP Plan
 
 📦 حجم:
 {gb}
@@ -731,7 +731,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if price is None:
             return
         trx = round(price / get_trx_price_toman(), 2)
-        await query.message.edit_text(f"""<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> فاکتور پرداخت ارزی
+        await query.message.edit_text(f"""💎 فاکتور پرداخت ارزی
 
 💳 معادل ریالی:
 {price:,} تومان
@@ -744,7 +744,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 ⚠️ توجه: دقیقاً مبلغ ذکر شده را واریز کنید و شبکه انتقال را به درستی انتخاب کنید.
 
-<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> پس از واریز، عکس رسید بفرستید""")
+✅ پس از واریز، عکس رسید بفرستید""")
 
     elif data.startswith("trx_vip_"):
         gb = data.replace("trx_vip_", "")
@@ -752,7 +752,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if price is None:
             return
         trx = round(price / get_trx_price_toman(), 2)
-        await query.message.edit_text(f"""<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> فاکتور پرداخت ارزی
+        await query.message.edit_text(f"""💎 فاکتور پرداخت ارزی
 
 💳 معادل ریالی:
 {price:,} تومان
@@ -765,7 +765,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 ⚠️ توجه: دقیقاً مبلغ ذکر شده را واریز کنید و شبکه انتقال را به درستی انتخاب کنید.
 
-<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> پس از واریز، عکس رسید بفرستید""")
+✅ پس از واریز، عکس رسید بفرستید""")
 
 # خرید با کیف پول اقتصادی
     elif data.startswith("buywallet_eco_"):
@@ -826,9 +826,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.message.edit_text(
             """
-<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> خرید انجام شد
+✅ خرید انجام شد
 
-<tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> منتظر ارسال کانفیگ باشید
+⏳ منتظر ارسال کانفیگ باشید
 """,
             reply_markup=keyboard
         )
@@ -892,9 +892,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.message.edit_text(
             """
-<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> خرید انجام شد
+✅ خرید انجام شد
 
-<tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> منتظر ارسال کانفیگ باشید
+⏳ منتظر ارسال کانفیگ باشید
 """,
             reply_markup=keyboard
         )
@@ -950,7 +950,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await context.bot.send_message(
             chat_id=target_id,
-            text="<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> کد هدیه شما با موفقیت تایید شد\n<tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> در حال بررسی است و منتظر کانفینگ باشید"
+            text="✅ کد هدیه شما با موفقیت تایید شد\n⏳ در حال بررسی است و منتظر کانفینگ باشید"
         )
 
         await query.message.reply_text(
@@ -1177,7 +1177,7 @@ f"""💳 فاکتور شارژ کیف پول
         waiting_receipt[user_id] = {"type":"wallet","amount":amount}
 
         await query.message.edit_text(
-f"""<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> فاکتور پرداخت ارزی
+f"""💎 فاکتور پرداخت ارزی
 
 💳 معادل ریالی:
 {amount:,} تومان
@@ -1190,7 +1190,7 @@ f"""<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> فاکتور پرد
 
 ⚠️ توجه: دقیقاً مبلغ ذکر شده را واریز کنید.
 
-<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> پس از واریز، عکس رسید بفرستید"""
+✅ پس از واریز، عکس رسید بفرستید"""
         )
 
 
@@ -1222,7 +1222,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await update.message.reply_text(
-            "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> کانفیگ ارسال شد"
+            "✅ کانفیگ ارسال شد"
         )
 
         del pending_config_user[
@@ -1260,7 +1260,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 [
                     InlineKeyboardButton(
-                        "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> تایید",
+                        "✅ تایید",
                         callback_data=f"gift_accept_{user_id}"
                     ),
 
@@ -1295,7 +1295,7 @@ mam4di
             )
 
             await update.message.reply_text(
-                "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 1 گیگ میباشد\n<tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
+                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 1 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
             )
 
             del gift_wait[user_id]
@@ -1313,7 +1313,7 @@ mam4di
 
                 [
                     InlineKeyboardButton(
-                        "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> تایید",
+                        "✅ تایید",
                         callback_data=f"gift_accept_{user_id}"
                     ),
 
@@ -1348,7 +1348,7 @@ mam4di_1k
             )
 
             await update.message.reply_text(
-                "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 2 گیگ میباشد\n<tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
+                "✅ کد هدیه شما با موفقیت ثبت شد\n📦 حجم کد هدیه شما 2 گیگ میباشد\n⏳ بعد تایید مدیر کانفینگ شما ارسال خواهد شد"
             )
 
             del gift_wait[user_id]
@@ -1379,7 +1379,7 @@ mam4di_1k
 
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"walletpay_card_{amount}")],
-                [InlineKeyboardButton("<tg-emoji emoji-id="5814670671153730702">💎</tg-emoji> پرداخت ارزی", callback_data=f"walletpay_trx_{amount}")],
+                [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"walletpay_trx_{amount}")],
                 [InlineKeyboardButton("🔙 بازگشت", callback_data="wallet")]
             ])
 
@@ -1405,7 +1405,7 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> کانفینگ با موفقیت ارسال شد"
+            "✅ کانفینگ با موفقیت ارسال شد"
         )
 
         del waiting_config[user_id]
@@ -1437,7 +1437,7 @@ mam4di_1k
                     pass
 
             await update.message.reply_text(
-                "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> پیام شما با موفقیت برای کاربران ارسال شد"
+                "✅ پیام شما با موفقیت برای کاربران ارسال شد"
             )
 
         except:
@@ -1463,7 +1463,7 @@ mam4di_1k
         )
 
         await update.message.reply_text(
-            "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> پیام شما با موفقیت ارسال شد"
+            "✅ پیام شما با موفقیت ارسال شد"
         )
 
         del private_message_wait[user_id]
@@ -1511,7 +1511,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         [
             InlineKeyboardButton(
-                "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> تایید",
+                "✅ تایید",
                 callback_data=f"accept_{user_id}"
             ),
 
@@ -1547,7 +1547,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
 
     await update.message.reply_text(
-        "<tg-emoji emoji-id="5834690072066137860">✅</tg-emoji> رسید شما ثبت شد\n<tg-emoji emoji-id="5834744450647069923">⏳</tg-emoji> منتظر تایید مدیریت باشید",
+        "✅ رسید شما ثبت شد\n⏳ منتظر تایید مدیریت باشید",
         reply_markup=keyboard2
     )
 
