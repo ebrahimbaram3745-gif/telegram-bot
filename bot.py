@@ -2,6 +2,13 @@
 import json
 import requests
 
+CE_CHART="📊"
+CE_FREE="🆓"
+CE_CHECK="✅"
+CE_DIAMOND="💎"
+CE_TIME="⏳"
+
+
 def load_data(filename):
     if not os.path.exists(filename):
         with open(filename, "w", encoding="utf-8") as f:
