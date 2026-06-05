@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import requests
 
@@ -518,7 +518,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("eco_"):
 
         gb = data.replace("eco_", "")
-        price = eco_prices[gb]
+        price = eco_prices.get(gb, vip_prices.get(gb))
+        if price is None:
+            return
 
         payment_select[user_id] = ("eco", gb)
 
@@ -594,7 +596,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("vip_"):
 
         gb = data.replace("vip_", "")
-        price = vip_prices[gb]
+        price = vip_prices.get(gb, eco_prices.get(gb))
+        if price is None:
+            return
 
         payment_select[user_id] = ("eco", gb)
 
@@ -670,7 +674,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data.startswith("card_eco_"):
         gb = data.replace("card_eco_", "")
-        price = eco_prices[gb]
+        price = eco_prices.get(gb, vip_prices.get(gb))
+        if price is None:
+            return
         waiting_receipt[user_id] = {"type":"buy","plan":gb,"amount":price}
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("💰 خرید از کیف پول", callback_data=f"buywallet_eco_{gb}")],
@@ -694,7 +700,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("card_vip_"):
         gb = data.replace("card_vip_", "")
-        price = vip_prices[gb]
+        price = vip_prices.get(gb, eco_prices.get(gb))
+        if price is None:
+            return
         waiting_receipt[user_id] = {"type":"buy","plan":gb,"amount":price}
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("💰 خرید از کیف پول", callback_data=f"buywallet_vip_{gb}")],
@@ -719,7 +727,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("trx_eco_"):
         gb = data.replace("trx_eco_", "")
-        price = eco_prices[gb]
+        price = eco_prices.get(gb, vip_prices.get(gb))
+        if price is None:
+            return
         trx = round(price / get_trx_price_toman(), 2)
         await query.message.edit_text(f"""💎 فاکتور پرداخت ارزی
 
@@ -738,7 +748,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("trx_vip_"):
         gb = data.replace("trx_vip_", "")
-        price = vip_prices[gb]
+        price = vip_prices.get(gb, eco_prices.get(gb))
+        if price is None:
+            return
         trx = round(price / get_trx_price_toman(), 2)
         await query.message.edit_text(f"""💎 فاکتور پرداخت ارزی
 
@@ -759,7 +771,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("buywallet_eco_"):
 
         gb = data.replace("buywallet_eco_", "")
-        price = eco_prices[gb]
+        price = eco_prices.get(gb, vip_prices.get(gb))
+        if price is None:
+            return
 
         if user_wallets[user_id] < price:
 
@@ -823,7 +837,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("buywallet_vip_"):
 
         gb = data.replace("buywallet_vip_", "")
-        price = vip_prices[gb]
+        price = vip_prices.get(gb, eco_prices.get(gb))
+        if price is None:
+            return
 
         if user_wallets[user_id] < price:
 
