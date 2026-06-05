@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 
 def load_data(filename):
     if not os.path.exists(filename):
@@ -70,6 +71,19 @@ pending_gifts = {}
 waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
+
+trx_wait = {}
+
+def get_trx_price_toman():
+    try:
+        r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=tron&vs_currencies=usd", timeout=10).json()
+        trx_usd = float(r["tron"]["usd"])
+        usdt = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=irr", timeout=10).json()
+        usdt_irr = float(usdt["tether"]["irr"])
+        return (trx_usd * usdt_irr) / 10
+    except:
+        return 3000
+
 
 eco_prices = {
     "📊 1G | ⏳ 30D | 💰 50T": 50000,
