@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import requests
 
@@ -115,6 +115,13 @@ eco_prices = {
 vip_prices = {
     "📊 70G | ⏳ 30D | 💰 690T": 690000,
     "📊 320G | ⏳ 180D | 💰 1390T": 1390000,
+}
+
+wireguard_prices = {
+    "📊 36G | ⏳ 30D | 💰 459T | 1👤": 459000,
+    "📊 78G | ⏳ 60D | 💰 766T | 1👤": 766000,
+    "📊 127G | ⏳ 90D | 💰 991T | 1👤": 991000,
+    "📊 300G | ⏳ 180D | 💰 1609T | 1👤": 1609000,
 }
 
 
@@ -414,6 +421,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             [
                 InlineKeyboardButton(
+                    "⚡ سرویس WireGuard",
+                    callback_data="wireguard"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
                     "🔙 بازگشت",
                     callback_data="home"
                 )
@@ -508,6 +522,28 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     # vip
+
+    elif data == "wireguard":
+
+        keys = []
+
+        for gb, price in wireguard_prices.items():
+            keys.append([
+                InlineKeyboardButton(
+                    f"⚡ {gb} • {price:,}",
+                    callback_data=f"wg_{gb}"
+                )
+            ])
+
+        keys.append([
+            InlineKeyboardButton("🔙 بازگشت", callback_data="buy")
+        ])
+
+        await query.message.edit_text(
+            "⚡ پلن های WireGuard",
+            reply_markup=InlineKeyboardMarkup(keys)
+        )
+
     elif data == "vip":
 
         keys = []
@@ -614,6 +650,28 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     # خرید vip
+
+    elif data.startswith("wg_"):
+
+        gb = data.replace("wg_", "")
+        price = wireguard_prices.get(gb)
+        if price is None:
+            return
+
+        payment_select[user_id] = ("wireguard", gb)
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"card_wireguard_{gb}")],
+            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_wireguard_{gb}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="wireguard")]
+        ])
+
+        await query.message.edit_text(
+            "💳 روش پرداخت را انتخاب کنید",
+            reply_markup=keyboard
+        )
+        return
+
     elif data.startswith("vip_"):
 
         gb = data.replace("vip_", "")
