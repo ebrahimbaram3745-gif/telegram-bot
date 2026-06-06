@@ -71,6 +71,7 @@ waiting_receipt = {}
 wallet_wait = {}
 pending_config_user = {}
 user_wallets = load_data("balances.json")
+referrals = load_data("referrals.json")
 
 gift_wait = {}
 used_gifts = load_data("gifts.json")
@@ -181,8 +182,8 @@ def home_keys():
 
         [
             InlineKeyboardButton(
-                "📚 آموزش اتصال",
-                callback_data="help"
+                "👥 زیرمجموعه گیری",
+                callback_data="referral"
             ),
 
             InlineKeyboardButton(
@@ -234,6 +235,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
+
+    if context.args:
+        try:
+            ref_code = context.args[0]
+            if ref_code.isdigit() and int(ref_code) != user_id:
+                referrals.setdefault(str(user_id), {})
+                if not referrals[str(user_id)].get("referred_by"):
+                    referrals[str(user_id)]["referred_by"] = int(ref_code)
+
+                    user_wallets[str(int(ref_code))] = int(user_wallets.get(str(int(ref_code)), 0)) + 3000
+
+                    referrals.setdefault(str(int(ref_code)), {})
+                    referrals[str(int(ref_code))]["count"] = int(referrals[str(int(ref_code))].get("count", 0)) + 1
+
+                    save_data("balances.json", user_wallets)
+                    save_data("referrals.json", referrals)
+        except:
+            pass
+
 
     try:
         with open("users.txt", "a+", encoding="utf-8") as f:
@@ -1274,34 +1294,31 @@ ID : @mak_11q
         )
 
     # آموزش
-    elif data == "help":
+    elif data == "referral":
 
-        text = """
-📚 آموزش اتصال
+        count = int(referrals.get(str(user_id), {}).get("count", 0))
+        earned = count * 3000
+        ref_link = f"https://t.me/{context.bot.username}?start={user_id}"
 
-1️⃣ برنامه V2rayNG نصب کنید
+        text = f"""
+👥 سیستم زیرمجموعه گیری
 
-2️⃣ کانفیگ را کپی کنید
+💰 پاداش هر دعوت: ۳۰۰۰ تومان
 
-3️⃣ داخل برنامه Paste کنید
+📊 تعداد دعوت‌ها: {count}
+💵 مجموع پورسانت: {earned:,} تومان
 
-4️⃣ Connect بزنید
+🔗 لینک دعوت شما:
+{ref_link}
+
+🎯 لینک را برای دوستان خود ارسال کنید.
 """
 
         keyboard = InlineKeyboardMarkup([
-
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="home"
-                )
-            ]
+            [InlineKeyboardButton("🏠 بازگشت به منوی اصلی", callback_data="home")]
         ])
 
-        await query.message.edit_text(
-            text,
-            reply_markup=keyboard
-        )
+        await query.message.edit_text(text, reply_markup=keyboard)
 
 
     elif data.startswith("walletpay_card_"):
