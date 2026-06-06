@@ -804,6 +804,59 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📤 بعد از پرداخت رسید ارسال کنید""", parse_mode="HTML", reply_markup=keyboard)
 
 
+
+    elif data.startswith("card_wireguard_"):
+        gb = data.replace("card_wireguard_", "")
+        price = wireguard_prices.get(gb)
+        if price is None:
+            return
+        waiting_receipt[user_id] = {"type":"buy","plan":"WireGuard | "+gb,"amount":price}
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📋 کپی شماره کارت", switch_inline_query_current_chat=CARD_NUMBER)],
+            [InlineKeyboardButton("💵 کپی مبلغ", switch_inline_query_current_chat=str(price))],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="wireguard")]
+        ])
+        await query.message.edit_text(f"""⚡ WireGuard
+
+📦 پلن:
+{gb}
+
+💵 مبلغ:
+{price:,} تومان
+
+💳 شماره کارت:
+
+<code>{CARD_NUMBER}</code>
+
+📤 بعد از پرداخت رسید ارسال کنید""", parse_mode="HTML", reply_markup=keyboard)
+
+    elif data.startswith("trx_wireguard_"):
+        gb = data.replace("trx_wireguard_", "")
+        price = wireguard_prices.get(gb)
+        if price is None:
+            return
+        waiting_receipt[user_id] = {"type":"buy","plan":"WireGuard | "+gb,"amount":price}
+        trx = round(price / get_trx_price_toman(), 2)
+        await query.message.edit_text(f"""💎 فاکتور پرداخت ارزی
+
+💳 معادل ریالی:
+{price:,} تومان
+
+💸 مبلغ ارزی قابل پرداخت:
+💰 {trx} TRX
+
+👇 آدرس کیف پول (برای کپی کلیک کنید):
+فعلا ندارد
+
+✅ پس از واریز، عکس رسید بفرستید""")
+
+    elif data.startswith("buywallet_wireguard_"):
+        gb = data.replace("buywallet_wireguard_", "")
+        price = wireguard_prices.get(gb)
+        if price is None:
+            return
+
+
     elif data.startswith("trx_eco_"):
         gb = data.replace("trx_eco_", "")
         price = eco_prices.get(gb, vip_prices.get(gb))
