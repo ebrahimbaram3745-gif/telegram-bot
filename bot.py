@@ -68,60 +68,89 @@ SECOND_ADMIN_ID = 8489061532
 CARD_NUMBER = "6219861449318822"
 
 # تنظیمات پنل Nahan
-NAHAN_URL = "https://proud-dew-0f73.itx-mm2di1000.workers.dev/sync/dash"
+NAHAN_URL = "https://proud-dew-0f73.itx-mm2di1000.workers.dev"
 NAHAN_API_ROUTE = "sync"
 NAHAN_PASSWORD = "admin"
 
-async def nahan_get_token():
+import uuid as uuid_lib
+import re as re_mod
+
+def nahan_get_token():
     """گرفتن توکن احراز هویت از پنل Nahan"""
     try:
         resp = requests.post(
             f"{NAHAN_URL}/{NAHAN_API_ROUTE}/api/auth",
-            json={"key": NAHAN_PASSWORD},
+            json={"password": NAHAN_PASSWORD},
             timeout=15
         )
         data = resp.json()
-        if data.get("success"):
+        if data.get("token"):
+            return data.get("token")
+        # برخی نسخه‌ها فیلد success دارن
+        if data.get("success") and data.get("token"):
             return data.get("token")
     except Exception as e:
         print(f"Nahan auth error: {e}")
     return None
 
-async def nahan_create_user(name: str, traffic_gb: int, days: int):
+def nahan_create_user(name: str, traffic_gb: int, days: int):
     """
     ساخت کاربر جدید در پنل Nahan
-    برمیگردونه: (uuid, sub_url) یا (None, None) در صورت خطا
+    فرمت کاربر: uuid:Name
+    برمیگردونه: (sub_url) یا None در صورت خطا
     """
-    import uuid as uuid_lib
-    token = await nahan_get_token()
+    token = nahan_get_token()
     if not token:
-        return None, None
+        print("Nahan: توکن دریافت نشد")
+        return None
 
     user_uuid = str(uuid_lib.uuid4())
+    # فرمت افزودن کاربر: uuid:name با حجم و زمان
     payload = {
         "token": token,
         "action": "addUser",
-        "user": {
-            "id": user_uuid,
-            "name": name,
-            "limitTotalReq": traffic_gb * 1024,  # تبدیل GB به MB (هر request ~1KB فرض)
-            "expiryDays": days,
-        }
+        "uuid": user_uuid,
+        "name": name,
+        "trafficGB": traffic_gb,
+        "days": days,
     }
 
     try:
         resp = requests.post(
-            f"{NAHAN_URL}/{NAHAN_API_ROUTE}/api/sync",
+            f"{NAHAN_URL}/{NAHAN_API_ROUTE}/api/users",
             json=payload,
             timeout=15
         )
+        print(f"Nahan addUser response: {resp.status_code} | {resp.text[:200]}")
         data = resp.json()
-        if data.get("success"):
+        if data.get("success") or data.get("ok") or resp.status_code in (200, 201):
             sub_url = f"{NAHAN_URL}/{NAHAN_API_ROUTE}?sub={name}"
-            return user_uuid, sub_url
+            return sub_url
     except Exception as e:
         print(f"Nahan create user error: {e}")
-    return None, None
+
+    # اگر endpoint بالا کار نکرد، با endpoint دیگه امتحان میکنیم
+    try:
+        payload2 = {
+            "token": token,
+            "users": [f"{user_uuid}:{name}"],
+            "trafficLimitGB": traffic_gb,
+            "expiryDays": days,
+        }
+        resp2 = requests.post(
+            f"{NAHAN_URL}/{NAHAN_API_ROUTE}/api/config",
+            json=payload2,
+            timeout=15
+        )
+        print(f"Nahan config response: {resp2.status_code} | {resp2.text[:200]}")
+        data2 = resp2.json()
+        if data2.get("success") or data2.get("ok") or resp2.status_code in (200, 201):
+            sub_url = f"{NAHAN_URL}/{NAHAN_API_ROUTE}?sub={name}"
+            return sub_url
+    except Exception as e2:
+        print(f"Nahan config error: {e2}")
+
+    return None
 
 waiting_receipt = {}
 wallet_wait = {}
@@ -132,7 +161,6 @@ referrals = load_data("referrals.json")
 gift_wait = {}
 used_gifts = load_data("gifts.json")
 pending_gifts = {}
-waiting_config = {}
 broadcast_wait = {}
 private_message_wait = {}
 
@@ -407,7 +435,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             traffic_gb = 10  # پیشفرض
             days = 30        # پیشفرض
 
-            import re as re_mod
             # مثال: "📊 5G | ⏳ 30D | 💰 235T" یا "WireGuard | 📊 36G | ⏳ 30D ..."
             gb_match = re_mod.search(r'(\d+)G', plan_name)
             day_match = re_mod.search(r'(\d+)D', plan_name)
@@ -416,16 +443,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if day_match:
                 days = int(day_match.group(1))
 
-            user_name = f"tg_{target_user}"
+            user_name = f"tg{target_user}"
 
-            uuid_val, sub_url = await nahan_create_user(user_name, traffic_gb, days)
+            sub_url = nahan_create_user(user_name, traffic_gb, days)
 
             if sub_url:
-                # ارسال لینک ساب مستقیم به کاربر
                 await context.bot.send_message(
                     target_user,
-                    f"""
-✅ پرداخت شما تایید شد و سرویس آماده است!
+                    f"""✅ پرداخت شما تایید شد و سرویس آماده است!
 
 📦 پلن: {plan_name}
 📊 حجم: {traffic_gb} گیگ
@@ -435,28 +460,34 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 <code>{sub_url}</code>
 
 📲 این لینک را در اپ خود وارد کنید
-🚀 اتصال پرسرعت و پایدار
-""",
+🚀 اتصال پرسرعت و پایدار""",
                     parse_mode="HTML"
                 )
 
                 await query.answer("✅ کانفیگ ساخته و ارسال شد", show_alert=True)
 
             else:
-                # اگر پنل خطا داد، برگرد به روش دستی
-                pending_config_user[target_user] = target_user
-
                 await context.bot.send_message(
                     target_user,
-                    """
-✅ پرداخت شما تایید شد
+                    """✅ پرداخت شما تایید شد
 
-⏳ لطفا منتظر ارسال کانفیگ باشید
-"""
+⚠️ در حال حاضر مشکل فنی در ساخت کانفیگ وجود دارد
+📞 لطفاً با پشتیبانی تماس بگیرید"""
+                )
+
+                await context.bot.send_message(
+                    ADMIN_ID,
+                    f"""⚠️ خطا در ساخت کانفیگ خودکار
+
+👤 کاربر: {target_user}
+📦 پلن: {plan_name}
+📊 حجم: {traffic_gb} گیگ | ⏳ {days} روز
+
+لطفاً کانفیگ را دستی از پنل بسازید و برای کاربر ارسال کنید."""
                 )
 
                 await query.answer(
-                    "⚠️ پنل خطا داد - کانفیگ دستی ارسال کنید",
+                    "⚠️ پنل خطا داد - به ادمین اطلاع داده شد",
                     show_alert=True
                 )
 
@@ -868,42 +899,67 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_wallets[user_id] -= price
         save_data("balances.json", user_wallets)
 
-        pending_config_user[user_id] = user_id
+        # استخراج حجم و روز
+        traffic_gb = 36
+        days = 30
+        gb_match = re_mod.search(r'(\d+)G', gb)
+        day_match = re_mod.search(r'(\d+)D', gb)
+        if gb_match:
+            traffic_gb = int(gb_match.group(1))
+        if day_match:
+            days = int(day_match.group(1))
+
+        user_name = f"tg{user_id}"
+        sub_url = nahan_create_user(user_name, traffic_gb, days)
 
         await context.bot.send_message(
             ADMIN_ID,
-            f"""
-🛒 خرید جدید با کیف پول
+            f"""🛒 خرید جدید با کیف پول
 
 👤 {query.from_user.first_name}
 
 📦 WireGuard | {gb}
 
 💵 {price:,} تومان
-"""
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ خودکار ناموفق بود"}"""
         )
 
         await context.bot.send_message(
             SECOND_ADMIN_ID,
-            f"""
-🛒 خرید جدید با کیف پول
+            f"""🛒 خرید جدید با کیف پول
 
 👤 {query.from_user.first_name}
 
 📦 WireGuard | {gb}
 
 💵 {price:,} تومان
-"""
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ خودکار ناموفق بود"}"""
         )
 
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 بازگشت", callback_data="home")]
         ])
 
-        await query.message.edit_text(
-            "✅ خرید انجام شد\n\n⏳ منتظر ارسال کانفیگ باشید",
-            reply_markup=keyboard
-        )
+        if sub_url:
+            await query.message.edit_text(
+                f"""✅ خرید انجام شد
+
+📦 پلن WireGuard: {gb}
+📊 حجم: {traffic_gb} گیگ
+⏳ مدت: {days} روز
+
+🔗 لینک اشتراک شما:
+<code>{sub_url}</code>
+
+📲 این لینک را در اپ خود وارد کنید""",
+                parse_mode="HTML",
+                reply_markup=keyboard
+            )
+        else:
+            await query.message.edit_text(
+                "✅ خرید انجام شد\n\n⚠️ مشکل فنی در ساخت کانفیگ - پشتیبانی در حال بررسی است",
+                reply_markup=keyboard
+            )
 
 
     elif data.startswith("trx_eco_"):
@@ -968,7 +1024,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data("balances.json", user_wallets)
 
         # استخراج حجم و روز
-        import re as re_mod
         traffic_gb = 10
         days = 30
         gb_match = re_mod.search(r'(\d+)G', gb)
@@ -978,35 +1033,31 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if day_match:
             days = int(day_match.group(1))
 
-        user_name = f"tg_{user_id}"
-        uuid_val, sub_url = await nahan_create_user(user_name, traffic_gb, days)
+        user_name = f"tg{user_id}"
+        sub_url = nahan_create_user(user_name, traffic_gb, days)
 
         await context.bot.send_message(
             ADMIN_ID,
-            f"""
-🛒 خرید جدید با کیف پول
+            f"""🛒 خرید جدید با کیف پول
 
 👤 {query.from_user.first_name}
 
 📦 {gb}
 
 💵 {price:,} تومان
-{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
-"""
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ خودکار ناموفق بود"}"""
         )
 
         await context.bot.send_message(
             SECOND_ADMIN_ID,
-            f"""
-🛒 خرید جدید با کیف پول
+            f"""🛒 خرید جدید با کیف پول
 
 👤 {query.from_user.first_name}
 
 📦 {gb}
 
 💵 {price:,} تومان
-{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
-"""
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ خودکار ناموفق بود"}"""
         )
 
         keyboard = InlineKeyboardMarkup([
@@ -1029,9 +1080,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=keyboard
             )
         else:
-            pending_config_user[user_id] = user_id
             await query.message.edit_text(
-                "✅ خرید انجام شد\n\n⏳ منتظر ارسال کانفیگ باشید",
+                "✅ خرید انجام شد\n\n⚠️ مشکل فنی در ساخت کانفیگ - پشتیبانی در حال بررسی است",
                 reply_markup=keyboard
             )
 
@@ -1055,7 +1105,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_data("balances.json", user_wallets)
 
         # استخراج حجم و روز
-        import re as re_mod
         traffic_gb = 70
         days = 30
         gb_match = re_mod.search(r'(\d+)G', gb)
@@ -1065,35 +1114,31 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if day_match:
             days = int(day_match.group(1))
 
-        user_name = f"tg_{user_id}"
-        uuid_val, sub_url = await nahan_create_user(user_name, traffic_gb, days)
+        user_name = f"tg{user_id}"
+        sub_url = nahan_create_user(user_name, traffic_gb, days)
 
         await context.bot.send_message(
             ADMIN_ID,
-            f"""
-🛒 خرید جدید با کیف پول
+            f"""🛒 خرید جدید با کیف پول
 
 👤 {query.from_user.first_name}
 
 📦 VIP | {gb}
 
 💵 {price:,} تومان
-{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
-"""
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ خودکار ناموفق بود"}"""
         )
 
         await context.bot.send_message(
             SECOND_ADMIN_ID,
-            f"""
-🛒 خرید جدید با کیف پول
+            f"""🛒 خرید جدید با کیف پول
 
 👤 {query.from_user.first_name}
 
 📦 VIP | {gb}
 
 💵 {price:,} تومان
-{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
-"""
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ خودکار ناموفق بود"}"""
         )
 
         keyboard = InlineKeyboardMarkup([
@@ -1116,9 +1161,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=keyboard
             )
         else:
-            pending_config_user[user_id] = user_id
             await query.message.edit_text(
-                "✅ خرید انجام شد\n\n⏳ منتظر ارسال کانفیگ باشید",
+                "✅ خرید انجام شد\n\n⚠️ مشکل فنی در ساخت کانفیگ - پشتیبانی در حال بررسی است",
                 reply_markup=keyboard
             )
 
@@ -1167,18 +1211,38 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         target_id = int(data.replace("gift_accept_", ""))
 
-        volume = pending_gifts.get(target_id, "نامشخص")
+        volume = pending_gifts.get(target_id, "1 گیگ")
 
-        waiting_config[query.from_user.id] = target_id
+        # استخراج گیگ از متن حجم
+        traffic_gb = 1
+        days = 30
+        gift_gb_match = re_mod.search(r'(\d+)', volume)
+        if gift_gb_match:
+            traffic_gb = int(gift_gb_match.group(1))
 
-        await context.bot.send_message(
-            chat_id=target_id,
-            text="✅ کد هدیه شما با موفقیت تایید شد\n⏳ در حال بررسی است و منتظر کانفینگ باشید"
-        )
+        user_name = f"tg{target_id}"
+        sub_url = nahan_create_user(user_name, traffic_gb, days)
 
-        await query.message.reply_text(
-            "📤 کانفینگ کاربر را ارسال کنید"
-        )
+        if sub_url:
+            await context.bot.send_message(
+                chat_id=target_id,
+                text=f"""✅ کد هدیه شما تایید شد!
+
+📦 حجم: {volume}
+⏳ مدت: {days} روز
+
+🔗 لینک اشتراک شما:
+<code>{sub_url}</code>
+
+📲 این لینک را در اپ خود وارد کنید
+🚀 اتصال پرسرعت و پایدار""",
+                parse_mode="HTML"
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=target_id,
+                text="✅ کد هدیه شما تایید شد\n⚠️ مشکل فنی در ساخت کانفیگ - پشتیبانی در حال بررسی است"
+            )
 
         await query.answer("تایید شد")
 
@@ -1476,39 +1540,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("آیدی معتبر نیست.")
         return
 
-    # ارسال کانفیگ
-    if (
-        user_id == ADMIN_ID
-        or user_id == SECOND_ADMIN_ID
-    ) and pending_config_user:
-
-        target_user = list(
-            pending_config_user.values()
-        )[-1]
-
-        await context.bot.send_message(
-            target_user,
-            f"""
-🎉 کانفیگ شما آماده شد
-
-<code>{update.message.text}</code>
-
-🚀 اتصال پرسرعت و پایدار
-""",
-            parse_mode="HTML"
-        )
-
-        await update.message.reply_text(
-            "✅ کانفیگ ارسال شد"
-        )
-
-        del pending_config_user[
-            list(pending_config_user.keys())[-1]
-        ]
-
-        return
-
-
     # کد هدیه
     if user_id in gift_wait:
 
@@ -1670,24 +1701,6 @@ mam4di_1k
             await update.message.reply_text("❌ مبلغ معتبر وارد کنید")
             return
 
-
-    # ارسال کانفیگ توسط مدیر
-    if user_id in waiting_config:
-
-        target_user = waiting_config[user_id]
-
-        await context.bot.send_message(
-            chat_id=target_user,
-            text=update.message.text
-        )
-
-        await update.message.reply_text(
-            "✅ کانفینگ با موفقیت ارسال شد"
-        )
-
-        del waiting_config[user_id]
-
-        return
 
     # پیام همگانی
     if user_id in broadcast_wait:
