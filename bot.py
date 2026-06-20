@@ -69,7 +69,6 @@ CARD_NUMBER = "6219861449318822"
 
 # تنظیمات پنل Nahan
 NAHAN_URL = "https://proud-dew-0f73.itx-mm2di1000.workers.dev/sync/dash"
-NAHAN_API_ROUTE = "sync"
 NAHAN_PASSWORD = "admin"
 
 import uuid as uuid_lib
