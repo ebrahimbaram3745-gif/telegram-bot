@@ -67,6 +67,62 @@ SECOND_ADMIN_ID = 8489061532
 
 CARD_NUMBER = "6219861449318822"
 
+# تنظیمات پنل Nahan
+NAHAN_URL = "https://proud-dew-0f73.itx-mm2di1000.workers.dev"
+NAHAN_API_ROUTE = "sync"
+NAHAN_PASSWORD = "admin"
+
+async def nahan_get_token():
+    """گرفتن توکن احراز هویت از پنل Nahan"""
+    try:
+        resp = requests.post(
+            f"{NAHAN_URL}/{NAHAN_API_ROUTE}/api/auth",
+            json={"key": NAHAN_PASSWORD},
+            timeout=15
+        )
+        data = resp.json()
+        if data.get("success"):
+            return data.get("token")
+    except Exception as e:
+        print(f"Nahan auth error: {e}")
+    return None
+
+async def nahan_create_user(name: str, traffic_gb: int, days: int):
+    """
+    ساخت کاربر جدید در پنل Nahan
+    برمیگردونه: (uuid, sub_url) یا (None, None) در صورت خطا
+    """
+    import uuid as uuid_lib
+    token = await nahan_get_token()
+    if not token:
+        return None, None
+
+    user_uuid = str(uuid_lib.uuid4())
+    payload = {
+        "token": token,
+        "action": "addUser",
+        "user": {
+            "id": user_uuid,
+            "name": name,
+            "limitTotalReq": traffic_gb * 1024,  # تبدیل GB به MB (هر request ~1KB فرض)
+            "expiryDays": days,
+        }
+    }
+
+    try:
+        resp = requests.post(
+            f"{NAHAN_URL}/{NAHAN_API_ROUTE}/api/sync",
+            json=payload,
+            timeout=15
+        )
+        data = resp.json()
+        if data.get("success"):
+            sub_url = f"{NAHAN_URL}/{NAHAN_API_ROUTE}?sub={name}"
+            return user_uuid, sub_url
+    except Exception as e:
+        print(f"Nahan create user error: {e}")
+    return None, None
+
 waiting_receipt = {}
 wallet_wait = {}
 pending_config_user = {}
@@ -343,22 +399,68 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         else:
+            # --- ساخت خودکار کانفیگ از پنل Nahan ---
+            plan_info = info if info else {}
+            plan_name = plan_info.get("plan", "")
 
-            pending_config_user[target_user] = target_user
+            # تشخیص حجم و مدت از نام پلن
+            traffic_gb = 10  # پیشفرض
+            days = 30        # پیشفرض
 
-            await context.bot.send_message(
-                target_user,
-                """
+            import re as re_mod
+            # مثال: "📊 5G | ⏳ 30D | 💰 235T" یا "WireGuard | 📊 36G | ⏳ 30D ..."
+            gb_match = re_mod.search(r'(\d+)G', plan_name)
+            day_match = re_mod.search(r'(\d+)D', plan_name)
+            if gb_match:
+                traffic_gb = int(gb_match.group(1))
+            if day_match:
+                days = int(day_match.group(1))
+
+            user_name = f"tg_{target_user}"
+
+            uuid_val, sub_url = await nahan_create_user(user_name, traffic_gb, days)
+
+            if sub_url:
+                # ارسال لینک ساب مستقیم به کاربر
+                await context.bot.send_message(
+                    target_user,
+                    f"""
+✅ پرداخت شما تایید شد و سرویس آماده است!
+
+📦 پلن: {plan_name}
+📊 حجم: {traffic_gb} گیگ
+⏳ مدت: {days} روز
+
+🔗 لینک اشتراک شما:
+<code>{sub_url}</code>
+
+📲 این لینک را در اپ خود وارد کنید
+🚀 اتصال پرسرعت و پایدار
+""",
+                    parse_mode="HTML"
+                )
+
+                await query.answer("✅ کانفیگ ساخته و ارسال شد", show_alert=True)
+
+            else:
+                # اگر پنل خطا داد، برگرد به روش دستی
+                pending_config_user[target_user] = target_user
+
+                await context.bot.send_message(
+                    target_user,
+                    """
 ✅ پرداخت شما تایید شد
 
 ⏳ لطفا منتظر ارسال کانفیگ باشید
 """
-            )
+                )
 
-            await query.answer(
-                "تایید شد ✅",
-                show_alert=True
-            )
+                await query.answer(
+                    "⚠️ پنل خطا داد - کانفیگ دستی ارسال کنید",
+                    show_alert=True
+                )
+
+            del waiting_receipt[target_user]
 
     # رد رسید
     elif data.startswith("reject_"):
@@ -610,65 +712,6 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("💳 روش پرداخت را انتخاب کنید", reply_markup=keyboard)
         return
 
-        text = f"""
-🇩🇪 Economic Plan
-
-📦 حجم:
-{gb}
-
-💵 مبلغ:
-{price:,} تومان
-
-💳 شماره کارت:
-
-<code>{CARD_NUMBER}</code>
-
-📤 بعد از پرداخت رسید ارسال کنید
-"""
-
-        keyboard = InlineKeyboardMarkup([
-
-            [
-                InlineKeyboardButton("💳 کارت به کارت", callback_data="noop")
-            ],
-            [
-                InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")
-            ],
-            [
-                InlineKeyboardButton(
-                    "💰 خرید از کیف پول",
-                    callback_data=f"buywallet_eco_{gb}"
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "📋 کپی شماره کارت",
-                    switch_inline_query_current_chat=CARD_NUMBER
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "💵 کپی مبلغ",
-                    switch_inline_query_current_chat=str(price)
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="eco"
-                )
-            ]
-        ])
-
-        await query.message.edit_text(
-            text,
-            parse_mode="HTML",
-            reply_markup=keyboard
-        )
-
     # خرید vip
 
     elif data.startswith("wg_"):
@@ -699,75 +742,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if price is None:
             return
 
-        payment_select[user_id] = ("eco", gb)
+        payment_select[user_id] = ("vip", gb)
 
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"card_eco_{gb}")],
-            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_eco_{gb}")],
-            [InlineKeyboardButton("🔙 بازگشت", callback_data="eco")]
+            [InlineKeyboardButton("💳 کارت به کارت", callback_data=f"card_vip_{gb}")],
+            [InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_vip_{gb}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="vip")]
         ])
 
         await query.message.edit_text("💳 روش پرداخت را انتخاب کنید", reply_markup=keyboard)
         return
-
-        text = f"""
-💎 VIP Plan
-
-📦 حجم:
-{gb}
-
-💵 مبلغ:
-{price:,} تومان
-
-💳 شماره کارت:
-
-<code>{CARD_NUMBER}</code>
-
-📤 بعد از پرداخت رسید ارسال کنید
-"""
-
-        keyboard = InlineKeyboardMarkup([
-
-            [
-                InlineKeyboardButton("💳 کارت به کارت", callback_data="noop")
-            ],
-            [
-                InlineKeyboardButton("💎 پرداخت ارزی", callback_data=f"trx_vip_{gb}")
-            ],
-            [
-                InlineKeyboardButton(
-                    "💰 خرید از کیف پول",
-                    callback_data=f"buywallet_vip_{gb}"
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "📋 کپی شماره کارت",
-                    switch_inline_query_current_chat=CARD_NUMBER
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "💵 کپی مبلغ",
-                    switch_inline_query_current_chat=str(price)
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="vip"
-                )
-            ]
-        ])
-
-        await query.message.edit_text(
-            text,
-            parse_mode="HTML",
-            reply_markup=keyboard
-        )
 
     
     
@@ -832,6 +816,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         waiting_receipt[user_id] = {"type":"buy","plan":"WireGuard | "+gb,"amount":price}
         keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💰 خرید از کیف پول", callback_data=f"buywallet_wireguard_{gb}")],
             [InlineKeyboardButton("📋 کپی شماره کارت", switch_inline_query_current_chat=CARD_NUMBER)],
             [InlineKeyboardButton("💵 کپی مبلغ", switch_inline_query_current_chat=str(price))],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="wireguard")]
@@ -875,6 +860,50 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         price = wireguard_prices.get(gb)
         if price is None:
             return
+
+        if user_wallets[user_id] < price:
+            await query.message.edit_text("❌ موجودی شما کافی نیست")
+            return
+
+        user_wallets[user_id] -= price
+        save_data("balances.json", user_wallets)
+
+        pending_config_user[user_id] = user_id
+
+        await context.bot.send_message(
+            ADMIN_ID,
+            f"""
+🛒 خرید جدید با کیف پول
+
+👤 {query.from_user.first_name}
+
+📦 WireGuard | {gb}
+
+💵 {price:,} تومان
+"""
+        )
+
+        await context.bot.send_message(
+            SECOND_ADMIN_ID,
+            f"""
+🛒 خرید جدید با کیف پول
+
+👤 {query.from_user.first_name}
+
+📦 WireGuard | {gb}
+
+💵 {price:,} تومان
+"""
+        )
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="home")]
+        ])
+
+        await query.message.edit_text(
+            "✅ خرید انجام شد\n\n⏳ منتظر ارسال کانفیگ باشید",
+            reply_markup=keyboard
+        )
 
 
     elif data.startswith("trx_eco_"):
@@ -937,8 +966,20 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user_wallets[user_id] -= price 
         save_data("balances.json", user_wallets)
-        
-        pending_config_user[user_id] = user_id
+
+        # استخراج حجم و روز
+        import re as re_mod
+        traffic_gb = 10
+        days = 30
+        gb_match = re_mod.search(r'(\d+)G', gb)
+        day_match = re_mod.search(r'(\d+)D', gb)
+        if gb_match:
+            traffic_gb = int(gb_match.group(1))
+        if day_match:
+            days = int(day_match.group(1))
+
+        user_name = f"tg_{user_id}"
+        uuid_val, sub_url = await nahan_create_user(user_name, traffic_gb, days)
 
         await context.bot.send_message(
             ADMIN_ID,
@@ -950,6 +991,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📦 {gb}
 
 💵 {price:,} تومان
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
 """
         )
 
@@ -963,27 +1005,35 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📦 {gb}
 
 💵 {price:,} تومان
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
 """
         )
 
         keyboard = InlineKeyboardMarkup([
-
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="home"
-                )
-            ]
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="home")]
         ])
 
-        await query.message.edit_text(
-            """
-✅ خرید انجام شد
+        if sub_url:
+            await query.message.edit_text(
+                f"""✅ خرید انجام شد
 
-⏳ منتظر ارسال کانفیگ باشید
-""",
-            reply_markup=keyboard
-        )
+📦 پلن: {gb}
+📊 حجم: {traffic_gb} گیگ
+⏳ مدت: {days} روز
+
+🔗 لینک اشتراک شما:
+<code>{sub_url}</code>
+
+📲 این لینک را در اپ خود وارد کنید""",
+                parse_mode="HTML",
+                reply_markup=keyboard
+            )
+        else:
+            pending_config_user[user_id] = user_id
+            await query.message.edit_text(
+                "✅ خرید انجام شد\n\n⏳ منتظر ارسال کانفیگ باشید",
+                reply_markup=keyboard
+            )
 
     # خرید با کیف پول vip
     elif data.startswith("buywallet_vip_"):
@@ -1004,7 +1054,19 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_wallets[user_id] -= price
         save_data("balances.json", user_wallets)
 
-        pending_config_user[user_id] = user_id
+        # استخراج حجم و روز
+        import re as re_mod
+        traffic_gb = 70
+        days = 30
+        gb_match = re_mod.search(r'(\d+)G', gb)
+        day_match = re_mod.search(r'(\d+)D', gb)
+        if gb_match:
+            traffic_gb = int(gb_match.group(1))
+        if day_match:
+            days = int(day_match.group(1))
+
+        user_name = f"tg_{user_id}"
+        uuid_val, sub_url = await nahan_create_user(user_name, traffic_gb, days)
 
         await context.bot.send_message(
             ADMIN_ID,
@@ -1013,9 +1075,10 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 👤 {query.from_user.first_name}
 
-📦 {gb}
+📦 VIP | {gb}
 
 💵 {price:,} تومان
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
 """
         )
 
@@ -1026,30 +1089,38 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 👤 {query.from_user.first_name}
 
-📦 {gb}
+📦 VIP | {gb}
 
 💵 {price:,} تومان
+{"✅ کانفیگ خودکار ارسال شد" if sub_url else "⚠️ ارسال کانفیگ دستی لازم است"}
 """
         )
 
         keyboard = InlineKeyboardMarkup([
-
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="home"
-                )
-            ]
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="home")]
         ])
 
-        await query.message.edit_text(
-            """
-✅ خرید انجام شد
+        if sub_url:
+            await query.message.edit_text(
+                f"""✅ خرید انجام شد
 
-⏳ منتظر ارسال کانفیگ باشید
-""",
-            reply_markup=keyboard
-        )
+📦 پلن VIP: {gb}
+📊 حجم: {traffic_gb} گیگ
+⏳ مدت: {days} روز
+
+🔗 لینک اشتراک شما:
+<code>{sub_url}</code>
+
+📲 این لینک را در اپ خود وارد کنید""",
+                parse_mode="HTML",
+                reply_markup=keyboard
+            )
+        else:
+            pending_config_user[user_id] = user_id
+            await query.message.edit_text(
+                "✅ خرید انجام شد\n\n⏳ منتظر ارسال کانفیگ باشید",
+                reply_markup=keyboard
+            )
 
 
     # تست رایگان
@@ -1334,9 +1405,10 @@ f"""💳 فاکتور شارژ کیف پول
 {amount:,} تومان
 
 شماره کارت:
-6037990000000000
+<code>{CARD_NUMBER}</code>
 
-پس از پرداخت عکس رسید را ارسال کنید."""
+پس از پرداخت عکس رسید را ارسال کنید.""",
+            parse_mode="HTML"
         )
 
     elif data.startswith("walletpay_trx_"):
@@ -1345,6 +1417,8 @@ f"""💳 فاکتور شارژ کیف پول
 
         waiting_receipt[user_id] = {"type":"wallet","amount":amount}
 
+        trx = round(amount / get_trx_price_toman(), 2)
+
         await query.message.edit_text(
 f"""💎 فاکتور پرداخت ارزی
 
@@ -1352,7 +1426,7 @@ f"""💎 فاکتور پرداخت ارزی
 {amount:,} تومان
 
 💸 مبلغ ارزی قابل پرداخت:
-{amount} TRX
+{trx} TRX
 
 👇 آدرس کیف پول (برای کپی کلیک کنید):
 فعلاً ندارد
