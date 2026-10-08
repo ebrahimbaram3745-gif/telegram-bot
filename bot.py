@@ -22,7 +22,7 @@ except ImportError:
 
 # ───────────────────────── تنظیمات اصلی ─────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "7363962357").replace(" ", "").split(",") if x}
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "123456789").replace(" ", "").split(",") if x}
 # ➕ ادمین اصلی (فقط او می‌تواند ادمین اضافه/حذف کند)
 MAIN_ADMIN_ID = 7363962357
 ENV_ADMIN_IDS = set(ADMIN_IDS)  # ادمین‌های داخل تنظیمات هم ادمین اصلی حساب می‌شوند
@@ -71,6 +71,7 @@ EMOJI = {
     "subbal": "➖", "emoji": "😀", "settings": "⚙️", "help": "📖", "rules": "📜",
     "ref": "🤝", "phone": "📱", "chest": "🧰", "bag": "🛍",
     "layout": "🧩", "searchsvc": "🔎", "cleanup": "🧹", "layout1": "1️⃣", "layout2": "2️⃣", "layout3": "3️⃣", "original": "♻️",
+    "startlayout": "🏠", "morelayout": "😎", "trx": "🧾", "today": "📅", "yesterday": "⏪", "last7": "7️⃣", "last30": "📆", "alltrx": "📚",
     "ip": "📍", "usage": "📊", "mysettings": "⚙️", "remind": "🔔", "transfer": "🔁", "ipbox": "🛡",  # ➕
 }
 # ➕ ایموجی دکمه‌های جدید (تمدید، حذف، تغییر نام، کد تخفیف، تراکنش‌ها)
@@ -317,6 +318,18 @@ def row(*b):
         # چیدمان سوم: دکمه اول به انتهای ردیف می‌رود.
         return (b[1:] + b[:1]) if len(b) > 1 else b
     # حالت ۴: اورجینال، مستقل از تنظیمات RTL.
+    return list(reversed(b)) if RTL else b
+
+def section_row(section, *b):
+    """چیدمان مستقل برای منوی استارت و سایر امکانات."""
+    b = [x for x in b if x is not None]
+    layout = S("layout:" + section) or "4"
+    if layout == "1":
+        return list(reversed(b)) if RTL else b
+    if layout == "2":
+        return b if RTL else list(reversed(b))
+    if layout == "3":
+        return (b[1:] + b[:1]) if len(b) > 1 else b
     return list(reversed(b)) if RTL else b
 
 def is_admin(uid): return uid in ADMIN_IDS
@@ -791,27 +804,30 @@ async def panel_info(p, username):
 # ───────────────────────── کیبوردها ─────────────────────────
 def main_kb(uid):
     kb = [
-        row(btn("خرید اشتراک", "buy", GREEN, "buy")),
-        row(btn("اشتراک ها", "subs", None, "subs"), btn("افزایش موجودی", "account", None, "wallet")),
-        row(btn("تست قبل از خرید", "test", RED, "test")),
-        row(btn("پشتیبانی", url=S("support_url"), ek="support"), btn("کانال", url=S("channel_url"), ek="channel"),
-            btn("حساب", "account", None, "account")),
-        row(btn("سایر امکانات", "more", None, "more")),
+        section_row("start", btn("خرید اشتراک", "buy", GREEN, "buy")),
+        section_row("start", btn("اشتراک ها", "subs", None, "subs"), btn("افزایش موجودی", "account", None, "wallet")),
+        section_row("start", btn("تست قبل از خرید", "test", RED, "test")),
+        section_row("start", btn("پشتیبانی", url=S("support_url"), ek="support"), btn("کانال", url=S("channel_url"), ek="channel"), btn("حساب", "account", None, "account")),
+        section_row("start", btn("سایر امکانات", "more", None, "more")),
     ]
-    if is_admin(uid):  # دکمه مخفی؛ فقط ادمین می‌بیند
-        kb.append(row(btn("پنل مدیریت", "admin", BLUE, "admin")))
+    if is_admin(uid):
+        kb.append(section_row("start", btn("پنل مدیریت", "admin", BLUE, "admin")))
     return kb
 
 def back_home(): return [row(btn("بازگشت به منوی اصلی", "home", RED, "back"))]
 
-def layout_kb():
-    current = S("button_layout") or "1"
+def layout_choices(section, title, back="a:layout"):
+    current = S("layout:" + section) or "4"
     return [
-        row(btn("چیدمان اول" + (" ✅" if current == "1" else ""), "lay:1", BLUE, "layout1")),
-        row(btn("چیدمان دوم" + (" ✅" if current == "2" else ""), "lay:2", BLUE, "layout2")),
-        row(btn("چیدمان سوم" + (" ✅" if current == "3" else ""), "lay:3", BLUE, "layout3")),
-        row(btn("بازگشت به حالت اورجینال" + (" ✅" if current == "4" else ""), "lay:4", GREEN, "original")),
-    ] + admin_back("admin")
+        row(btn("چیدمان اول" + (" ✅" if current == "1" else ""), f"lay:{section}:1", BLUE, "layout1")),
+        row(btn("چیدمان دوم" + (" ✅" if current == "2" else ""), f"lay:{section}:2", BLUE, "layout2")),
+        row(btn("چیدمان سوم" + (" ✅" if current == "3" else ""), f"lay:{section}:3", BLUE, "layout3")),
+        row(btn("حالت اورجینال" + (" ✅" if current == "4" else ""), f"lay:{section}:4", GREEN, "original")),
+    ] + admin_back(back)
+
+def layout_kb():
+    return [row(btn("چیدمان بخش استارت", "laymenu:start", BLUE, "startlayout")),
+            row(btn("چیدمان سایر امکانات", "laymenu:more", BLUE, "morelayout"))] + admin_back("admin")
 
 def admin_kb():
     return [
@@ -978,7 +994,8 @@ async def page_account(update, uid):
     text = render("account", ID=uid, USER=html.escape(u["name"] or ""), PHONE=u["phone"] or "ثبت نشده",
                   GROUP=u["grp"], JOINED=jdate(u["created"]), REF=uid, BALANCE=money(u["balance"]),
                   SERVICES=services, INVOICES=inv, REFS=refs, DATE=jdate())
-    kb = [row(btn("افزایش موجودی", "topup", GREEN, "bag"), btn("شارژ ویژه با هدیه", "gift", GREEN, "gift"))]
+    kb = [row(btn("افزایش موجودی", "topup", GREEN, "bag"), btn("شارژ ویژه با هدیه", "gift", GREEN, "gift")),
+          row(btn("کل تراکنش‌های من", "utrx:today", BLUE, "trx"))]
     if not u["phone"]: kb.append(row(btn("ثبت شماره تماس", "phone", None, "phone")))
     kb += back_home()
     await show(update, text, kb)
@@ -1064,6 +1081,22 @@ async def page_service(update, uid, sid):
     kb = [r for r in kb if r]  # ➕
     await show(update, text, kb)
 
+async def page_user_trx(update, uid, per="today"):
+    if per not in TRX_PERIODS: per = "today"
+    a, b = trx_range(per)
+    buys = q("SELECT * FROM services WHERE user_id=? AND is_test=0 AND created>=? AND created<?", (uid, a, b))
+    rens = q("SELECT * FROM txlog WHERE user_id=? AND kind='renew' AND created>=? AND created<?", (uid, a, b))
+    pays = q("SELECT * FROM payments WHERE user_id=? AND status='ok' AND created>=? AND created<?", (uid, a, b))
+    lines = [f"{E('trx')} <b>تراکنش‌های من | {TRX_PERIODS[per]}</b>", "<blockquote>"]
+    lines += [f"🛒 خرید سرویس: {money(sum(x['price'] or 0 for x in buys))} تومان" if buys else "🛒 خرید سرویس: ۰"]
+    lines += [f"🔄 تمدید: {money(sum(x['amount'] or 0 for x in rens))} تومان" if rens else "🔄 تمدید: ۰"]
+    lines += [f"💳 شارژ کیف پول: {money(sum(x['amount'] or 0 for x in pays))} تومان" if pays else "💳 شارژ کیف پول: ۰"]
+    lines += [f"🧾 تعداد عملیات: {len(buys)+len(rens)+len(pays)}", "</blockquote>"]
+    kb = [row(btn("امروز", "utrx:today", BLUE, "today"), btn("دیروز", "utrx:yday", BLUE, "yesterday")),
+          row(btn("۷ روز اخیر", "utrx:7", BLUE, "last7"), btn("۳۰ روز اخیر", "utrx:30", BLUE, "last30")),
+          row(btn("کل تراکنش‌ها", "utrx:all", GREEN, "alltrx"))]
+    await show(update, "\n".join(lines), kb + back_home())
+
 async def do_test(update, ctx, uid):
     u = get_user(uid)
     if S("test_enabled") != "1": return await show(update, "اکانت تست فعلاً غیرفعال است.", back_home())
@@ -1082,12 +1115,12 @@ async def do_test(update, ctx, uid):
     await deliver(ctx, uid, sid, "test_delivery")
 
 async def page_more(update, uid):
-    kb = [row(btn("راهنما", "help", None, "help"), btn("قوانین", "rules", None, "rules")),
-          row(btn("زیرمجموعه‌گیری", "ref", GREEN, "ref"), btn("حساب کاربری", "account", None, "account"))]
-    kb = [row(btn("اطلاعات IP من", "ip", GREEN, "ip")),  # ➕ مثل طرح جدید
-          row(btn("گزارش مصرف", "usage", None, "usage"), btn("پیشنهاد سرویس", "suggest", None, "suggest")),
-          row(btn("تنظیمات من", "myset", None, "mysettings"), btn("تنظیم یادآورها", "remind", None, "remind")),
-          row(btn("انتقال سرویس", "transfer", None, "transfer"))] + kb
+    kb = [section_row("more", btn("راهنما", "help", None, "help"), btn("قوانین", "rules", None, "rules")),
+          section_row("more", btn("زیرمجموعه‌گیری", "ref", GREEN, "ref"), btn("حساب کاربری", "account", None, "account"))]
+    kb = [section_row("more", btn("اطلاعات IP من", "ip", GREEN, "ip")),
+          section_row("more", btn("گزارش مصرف", "usage", None, "usage"), btn("پیشنهاد سرویس", "suggest", None, "suggest")),
+          section_row("more", btn("تنظیمات من", "myset", None, "mysettings"), btn("تنظیم یادآورها", "remind", None, "remind")),
+          section_row("more", btn("انتقال سرویس", "transfer", None, "transfer"))] + kb
     await show(update, render("more"), kb + back_home())
 
 # ➕ صفحات جدید سایر امکانات
@@ -1536,6 +1569,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if d.startswith("pay:"):
         _, a, b = d.split(":"); return await do_pay(update, ctx, uid, int(a), int(b))
     if d == "account": clear_state(ctx); return await page_account(update, uid)
+    if d.startswith("utrx:"): return await page_user_trx(update, uid, d[5:])
     if d == "topup": return await page_topup(update)
     if d == "gift": return await page_topup(update, True)
     if d.startswith("ta:"):
@@ -1619,11 +1653,17 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if not adm: return
     # ---------- ادمین ----------
-    if d == "a:layout": return await show(update, f"{E('layout')} <b>چیدمان دکمه‌ها</b>\nیکی از حالت‌ها را انتخاب کن:", layout_kb())
+    if d == "a:layout": return await show(update, f"{E('layout')} <b>چیدمان دکمه‌ها</b>\nبخش موردنظر را انتخاب کن:", layout_kb())
+    if d.startswith("laymenu:"):
+        section = d.split(":", 1)[1]
+        if section not in {"start", "more"}: return await show(update, "بخش نامعتبر است.", layout_kb())
+        title = "استارت" if section == "start" else "سایر امکانات"
+        return await show(update, f"{E('layout')} <b>چیدمان {title}</b>", layout_choices(section, title))
     if d.startswith("lay:"):
-        if d[4:] in {"1", "2", "3", "4"}:
-            set_S("button_layout", d[4:])
-        return await show(update, f"✅ چیدمان دکمه‌ها روی حالت {d[4:]} تنظیم شد.", layout_kb())
+        _, section, value = d.split(":")
+        if section in {"start", "more"} and value in {"1", "2", "3", "4"}:
+            set_S("layout:" + section, value)
+        return await show(update, f"✅ چیدمان ذخیره شد.", layout_choices(section, ""))
     if d == "admin": clear_state(ctx); return await show(update, f"{E('admin')} <b>پنل مدیریت</b>", admin_kb())
     if d == "a:stats":
         now = int(time.time())
