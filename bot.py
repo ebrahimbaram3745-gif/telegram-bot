@@ -70,6 +70,7 @@ EMOJI = {
     "bc": "📢", "pin": "📍", "point": "👇", "link": "🔗", "qr": "🔳", "addbal": "➕",
     "subbal": "➖", "emoji": "😀", "settings": "⚙️", "help": "📖", "rules": "📜",
     "ref": "🤝", "phone": "📱", "chest": "🧰", "bag": "🛍",
+    "layout": "🧩", "searchsvc": "🔎", "cleanup": "🧹", "layout1": "1️⃣", "layout2": "2️⃣", "layout3": "3️⃣", "original": "♻️",
     "ip": "📍", "usage": "📊", "mysettings": "⚙️", "remind": "🔔", "transfer": "🔁", "ipbox": "🛡",  # ➕
 }
 # ➕ ایموجی دکمه‌های جدید (تمدید، حذف، تغییر نام، کد تخفیف، تراکنش‌ها)
@@ -185,6 +186,7 @@ DEFAULT_SETTINGS = {
     "support_url": "https://t.me/telegram", "channel_url": "https://t.me/telegram",
     "premium_on": "1", "bridge_url": "", "start_sticker": "", "suggest_plan": "",
     "extra_admins": "",
+    "button_layout": "1",
 }
 SETTING_TITLES = {
     "card_number": "شماره کارت", "card_owner": "نام صاحب کارت", "test_gb": "حجم تست (گیگ)",
@@ -304,7 +306,17 @@ def btn(text, data=None, style=None, ek=None, url=None):
         return IKB(label, callback_data=data or "noop", api_kwargs=kw)
 
 def row(*b):
+    """چیدمان قابل تنظیم دکمه‌ها؛ حالت ۱ همان رفتار قبلی است."""
     b = [x for x in b if x is not None]
+    layout = S("button_layout") or "1"
+    if layout == "1":
+        return list(reversed(b)) if RTL else b
+    if layout == "2":
+        return b if RTL else list(reversed(b))
+    if layout == "3":
+        # چیدمان سوم: دکمه اول به انتهای ردیف می‌رود.
+        return (b[1:] + b[:1]) if len(b) > 1 else b
+    # حالت ۴: اورجینال، مستقل از تنظیمات RTL.
     return list(reversed(b)) if RTL else b
 
 def is_admin(uid): return uid in ADMIN_IDS
@@ -792,6 +804,15 @@ def main_kb(uid):
 
 def back_home(): return [row(btn("بازگشت به منوی اصلی", "home", RED, "back"))]
 
+def layout_kb():
+    current = S("button_layout") or "1"
+    return [
+        row(btn("چیدمان اول" + (" ✅" if current == "1" else ""), "lay:1", BLUE, "layout1")),
+        row(btn("چیدمان دوم" + (" ✅" if current == "2" else ""), "lay:2", BLUE, "layout2")),
+        row(btn("چیدمان سوم" + (" ✅" if current == "3" else ""), "lay:3", BLUE, "layout3")),
+        row(btn("بازگشت به حالت اورجینال" + (" ✅" if current == "4" else ""), "lay:4", GREEN, "original")),
+    ] + admin_back("admin")
+
 def admin_kb():
     return [
         row(btn("آمار", "a:stats", BLUE, "stats"), btn("پیام همگانی", "a:bc", BLUE, "bc")),
@@ -802,7 +823,8 @@ def admin_kb():
         row(btn("تنظیمات تست", "a:test", None, "test"), btn("تنظیمات پرداخت", "a:pay", None, "card")),
         row(btn("جستجوی کاربر در پنل", "a:search", None, "search"), btn("آدرس پل", "set:bridge_url", None, "bridge")),
         row(btn("تنظیمات عمومی", "a:gen", None, "settings")),
-        row(btn("رنگ دکمه‌ها", "a:color", None, "settings"), btn("مدیریت ادمین‌ها", "a:admins", None, "admin")),
+        row(btn("رنگ دکمه‌ها", "a:color", None, "settings"), btn("چیدمان دکمه‌ها", "a:layout", None, "layout")),
+        row(btn("مدیریت ادمین‌ها", "a:admins", None, "admin")),
         row(btn("آدرس سرور اطلاعات IP", "set:ip_web_url", None, "ip")),
         row(btn("تراکنش‌ها", "a:trx", BLUE, "trx"), btn("کدهای تخفیف", "a:dc", GREEN, "discount")),  # ➕
         row(btn("بازگشت", "home", RED, "back")),
@@ -983,7 +1005,40 @@ async def page_subs(update, uid):
     for s in rows:
         st = "🟢" if s["status"] == "active" and s["expire"] > time.time() else ("⏳" if s["status"] == "pending" else "🔴")
         kb.append(row(btn(f"{st} {s['title'] or s['username']} | {s['gb']}GB{' (تست)' if s['is_test'] else ''}", f"sv:{s['id']}")))
-    await show(update, f"{E('subs')} <b>اشتراک‌های شما</b>", kb + back_home())
+    controls = [row(btn("جستجوی سرویس", "subsearch", BLUE, "searchsvc"),
+                     btn("پاک‌سازی منقضی‌ها", "subclean", RED, "cleanup"))]
+    await show(update, f"{E('subs')} <b>اشتراک‌های شما</b>", kb + controls + back_home())
+
+async def page_sub_search(update, uid, term):
+    term = (term or "").strip()
+    if not term:
+        return await page_subs(update, uid)
+    rows = q("SELECT * FROM services WHERE user_id=? AND status!='deleted' AND (username LIKE ? OR title LIKE ?) ORDER BY id DESC LIMIT 30",
+             (uid, f"%{term}%", f"%{term}%"))
+    if not rows:
+        return await show(update, "سرویسی با این مشخصات پیدا نشد.",
+                          [row(btn("جستجوی دوباره", "subsearch", BLUE, "searchsvc"))] + back_home())
+    kb = [row(btn(f"{'🟢' if s['status']=='active' else '🔴'} {s['title'] or s['username']} | {s['gb']}GB",
+                  f"sv:{s['id']}")) for s in rows]
+    await show(update, f"🔎 <b>نتیجه جستجو برای:</b> <code>{html.escape(term)}</code>",
+               kb + [row(btn("جستجوی دوباره", "subsearch", BLUE, "searchsvc"))] + back_home())
+
+async def cleanup_expired_services(update, ctx, uid):
+    rows = q("SELECT * FROM services WHERE user_id=? AND status!='deleted' AND expire<=?",
+             (uid, int(time.time())))
+    if not rows:
+        return await show(update, "✅ سرویس منقضی‌شده‌ای برای پاک‌سازی نیست.", back_home())
+    removed = 0
+    for s in rows:
+        pn = q("SELECT * FROM panels WHERE id=?", (s["panel_id"],), True)
+        if pn and pn["ptype"] != "manual" and s["status"] != "pending":
+            try:
+                await panel_delete(pn, s["username"])
+            except Exception as e:
+                log.warning("cleanup expired %s: %s", s["id"], e)
+        ex("UPDATE services SET status='deleted' WHERE id=?", (s["id"],))
+        removed += 1
+    return await show(update, f"✅ {removed} سرویس منقضی پاک‌سازی شد.", back_home())
 
 async def page_service(update, uid, sid):
     s = q("SELECT * FROM services WHERE id=? AND user_id=? AND status!='deleted'", (sid, uid), True)  # ➕
@@ -1488,7 +1543,16 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if d.startswith("tc:"):
         set_state(ctx, "amount", d[3:] == "1")
         return await show(update, "💳 مبلغ دلخواه را به تومان بفرستید (فقط عدد):", [row(btn("انصراف", "account", RED, "no"))])
-    if d == "subs": return await page_subs(update, uid)
+    if d == "subs": clear_state(ctx); return await page_subs(update, uid)
+    if d == "subsearch":
+        set_state(ctx, "subsearch")
+        return await show(update, "🔎 نام یا شناسه سرویس را بفرست:",
+                          [row(btn("انصراف", "subs", RED, "no"))])
+    if d == "subclean":
+        return await show(update, "⚠️ سرویس‌های منقضی از فهرست ربات حذف می‌شوند و حذف آن‌ها از پنل هم تلاش می‌شود. ادامه می‌دهی؟",
+                          [row(btn("بله، پاک‌سازی کن", "subclean:yes", RED, "cleanup"),
+                               btn("انصراف", "subs", GREEN, "back"))])
+    if d == "subclean:yes": return await cleanup_expired_services(update, ctx, uid)
     if d.startswith("sv:"): return await page_service(update, uid, int(d[3:]))
     if d.startswith("qr:"):
         s = q("SELECT * FROM services WHERE id=? AND user_id=?", (int(d[3:]), uid), True)
@@ -1555,6 +1619,11 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if not adm: return
     # ---------- ادمین ----------
+    if d == "a:layout": return await show(update, f"{E('layout')} <b>چیدمان دکمه‌ها</b>\nیکی از حالت‌ها را انتخاب کن:", layout_kb())
+    if d.startswith("lay:"):
+        if d[4:] in {"1", "2", "3", "4"}:
+            set_S("button_layout", d[4:])
+        return await show(update, f"✅ چیدمان دکمه‌ها روی حالت {d[4:]} تنظیم شد.", layout_kb())
     if d == "admin": clear_state(ctx); return await show(update, f"{E('admin')} <b>پنل مدیریت</b>", admin_kb())
     if d == "a:stats":
         now = int(time.time())
@@ -1795,6 +1864,9 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         _, a, b = back.split(":")
         if back.startswith("inv:"): return await page_invoice(update, uid, int(a), int(b))
         return await page_renew_invoice(update, uid, int(a), int(b))
+    if name == "subsearch":
+        clear_state(ctx)
+        return await page_sub_search(update, uid, txt)
     if name == "srename":  # ➕ تغییر نام سرویس
         new = " ".join(txt.split())
         if not new or len(new) > 32: return await m.reply_text("نام باید بین ۱ تا ۳۲ کاراکتر باشد. دوباره بفرست:")
