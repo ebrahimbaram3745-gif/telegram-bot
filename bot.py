@@ -801,6 +801,90 @@ async def panel_info(p, username):
     return {"status": st, "used": used / 1024 ** 3, "total": total / 1024 ** 3 if total else 0,
             "expire": jdate(exp) if exp else "نامحدود"}
 
+def _gb(value):
+    try:
+        return float(value or 0) / 1024 ** 3
+    except Exception:
+        return 0
+
+def _pick(obj, *keys, default=None):
+    if not isinstance(obj, dict):
+        return default
+    for key in keys:
+        value = obj.get(key)
+        if value is not None and value != "":
+            return value
+    return default
+
+async def panel_status(p):
+    """وضعیت کلی پنل، با سازگاری نسبی بین نسخه‌های مختلف."""
+    t = p["ptype"]
+    out = {"cpu": "-", "ram": "-", "swap": "-", "disk": "-", "panel_status": "نامشخص",
+           "version": "-", "down": 0, "up": 0, "down_speed": 0, "up_speed": 0,
+           "clients": 0, "main_accounts": 0, "user_down": 0, "user_up": 0,
+           "user_total": 0, "active_volume": 0}
+    if t == "manual":
+        out["panel_status"] = "فروش دستی، بدون اتصال به پنل"
+        return out
+    async with _http(p) as c:
+        if t in ("marzban", "pasarguard", "marzneshin"):
+            h = await _token(c, p)
+            data = {}
+            for path in ("/api/system", "/api/system/status", "/api/admin/system"):
+                try:
+                    r = await c.get(path, headers=h)
+                    if r.status_code < 400 and isinstance(r.json(), dict):
+                        data = r.json(); break
+                except Exception:
+                    pass
+            info = data.get("data", data) if isinstance(data, dict) else {}
+            cpu = _pick(info, "cpu", "cpu_percent", "cpu_usage")
+            ru = _pick(info, "ram_used", "memory_used", "used_memory")
+            rt = _pick(info, "ram_total", "memory_total", "total_memory")
+            if cpu is not None: out["cpu"] = f"{float(cpu):.1f}%"
+            if ru is not None or rt is not None:
+                out["ram"] = f"{_gb(ru):.2f} GB / {_gb(rt):.2f} GB"
+            out["swap"] = _pick(info, "swap", "swap_usage", default="-")
+            out["disk"] = _pick(info, "disk", "disk_usage", default="-")
+            out["version"] = _pick(info, "version", "app_version", default="-")
+            out["panel_status"] = "فعال ✅"
+        elif t in XUI_PREFIX:
+            await _xlogin(c, p)
+            root = XUI_PREFIX[t].split("/api")[0].split("/API")[0]
+            for path in (root + "/api/server/status", root + "/api/server/status/"):
+                try:
+                    r = await c.get(path)
+                    if r.status_code < 400:
+                        j = r.json()
+                        info = j.get("obj", j.get("data", j)) if isinstance(j, dict) else {}
+                        out["cpu"] = f"{float(_pick(info, 'cpu', 'cpu_percent', default=0)):.1f}%"
+                        out["ram"] = f"{_gb(_pick(info, 'mem', 'mem_used', default=0)):.2f} GB / {_gb(_pick(info, 'mem_total', 'memTotal', default=0)):.2f} GB"
+                        out["swap"] = f"{_gb(_pick(info, 'swap', 'swap_used', default=0)):.2f} GB / {_gb(_pick(info, 'swap_total', 'swapTotal', default=0)):.2f} GB"
+                        out["disk"] = f"{_gb(_pick(info, 'disk', 'disk_used', default=0)):.2f} GB / {_gb(_pick(info, 'disk_total', 'diskTotal', default=0)):.2f} GB"
+                        out["version"] = _pick(info, "version", "xray_version", default="-")
+                        out["panel_status"] = "فعال ✅"
+                        break
+                except Exception:
+                    pass
+    return out
+
+def panel_status_text(p, s):
+    return (
+        f"🛍 <b>وضعیت سرور {html.escape(p['name'])} 🚩</b>\n"
+        f"╔══════════════════════╗\n<b>📊 وضعیت صفحه اصلی سرور</b>\n"
+        f"╠ CPU: <b>{s['cpu']}</b>\n╠ وضعیت رم: <b>{s['ram']}</b>\n"
+        f"╠ لینک پنل: <code>{html.escape(p['url'] or '-')}</code>\n"
+        f"╠ SWAP: <b>{s['swap']}</b>\n╠ هارد: <b>{s['disk']}</b>\n"
+        f"╠ وضعیت پنل: <b>{s['panel_status']}</b>\n╠ نسخه پنل: <b>{html.escape(str(s['version']))}</b>\n"
+        f"╠ دانلود مصرفی: <b>{_gb(s['down']):.2f} GB</b>\n╠ آپلود مصرفی: <b>{_gb(s['up']):.2f} GB</b>\n"
+        f"╠ دانلود بر ثانیه: <b>{s['down_speed']} MB</b>\n╚ آپلود بر ثانیه: <b>{s['up_speed']} MB</b>\n\n"
+        f"╔══════════════════════╗\n<b>👥 وضعیت لیست اکانت‌ها</b>\n"
+        f"╠ تعداد کل کلاینت‌ها: <b>{s['clients']}</b>\n╠ تعداد اکانت‌های اصلی: <b>{s['main_accounts']}</b>\n"
+        f"╠ دانلود کاربران: <b>{_gb(s['user_down']):.2f} GB</b>\n╠ آپلود کاربران: <b>{_gb(s['user_up']):.2f} GB</b>\n"
+        f"╠ مجموع مصرف: <b>{_gb(s['user_total']):.2f} GB</b>\n"
+        f"╚ حجم فعال خریداری‌شده: <b>{s['active_volume']:.2f} GB</b>"
+    )
+
 # ───────────────────────── کیبوردها ─────────────────────────
 def main_kb(uid):
     kb = [
@@ -1705,8 +1789,27 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
              f"تنظیمات اضافه: <code>{html.escape(p['extra'] or '-')}</code>")
         kb = [row(btn("تست اتصال", f"pt:{p['id']}", BLUE, "search"),
                   btn("غیرفعال کن" if p["active"] else "فعال کن", f"pg:{p['id']}", RED if p["active"] else GREEN)),
+              row(btn("وضعیت پنل", f"pi:{p['id']}", BLUE, "stats")),
               row(btn("حذف پنل", f"pd:{p['id']}", RED, "no"))] + admin_back("a:panels")
         return await show(update, t, kb)
+    if d.startswith("pi:"):
+        p = q("SELECT * FROM panels WHERE id=?", (int(d[3:]),), True)
+        if not p: return await show(update, "پنل پیدا نشد.", admin_back("a:panels"))
+        try:
+            status = await panel_status(p)
+            rows = q("SELECT * FROM services WHERE panel_id=? AND status!='deleted'", (p["id"],))
+            status["clients"] = len(rows)
+            status["main_accounts"] = sum(1 for r in rows if not r["is_test"])
+            status["active_volume"] = sum(float(r["gb"] or 0) for r in rows
+                                          if r["status"] == "active" and (r["expire"] or 0) > time.time())
+            status["user_total"] = status["user_down"] + status["user_up"]
+            return await show(update, panel_status_text(p, status),
+                              [row(btn("🔄 بروزرسانی وضعیت", f"pi:{p['id']}", BLUE, "search")),
+                               row(btn("بازگشت به پنل", f"pv:{p['id']}", RED, "back"))])
+        except Exception as e:
+            return await show(update, f"❌ دریافت وضعیت پنل ناموفق بود.\n<code>{html.escape(str(e))[:500]}</code>",
+                              [row(btn("تلاش دوباره", f"pi:{p['id']}", BLUE, "search")),
+                               row(btn("بازگشت به پنل", f"pv:{p['id']}", RED, "back"))])
     if d.startswith("pt:"):
         ok, msg = await panel_test(q("SELECT * FROM panels WHERE id=?", (int(d[3:]),), True))
         return await cq.message.reply_text(msg)
