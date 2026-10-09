@@ -22,7 +22,7 @@ except ImportError:
 
 # ───────────────────────── تنظیمات اصلی ─────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "123456789").replace(" ", "").split(",") if x}
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "7363962357").replace(" ", "").split(",") if x}
 # ➕ ادمین اصلی (فقط او می‌تواند ادمین اضافه/حذف کند)
 MAIN_ADMIN_ID = 7363962357
 ENV_ADMIN_IDS = set(ADMIN_IDS)  # ادمین‌های داخل تنظیمات هم ادمین اصلی حساب می‌شوند
@@ -2109,14 +2109,149 @@ async def job_followup(ctx: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             log.warning("followup %s: %s", s["id"], e)
 
+
+# ───────────────────────── قابلیت‌های افزوده: تیکت، بکاپ، گزارش ─────────────────────────
+# این بخش افزوده است و منطق قبلی ربات را حذف یا جایگزین نمی‌کند.
+import shutil
+
+async def init_added_features():
+    CON.executescript("""
+    CREATE TABLE IF NOT EXISTS support_tickets(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+        subject TEXT DEFAULT '', status TEXT DEFAULT 'open', created INTEGER,
+        updated INTEGER, admin_id INTEGER DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS support_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER NOT NULL,
+        sender_id INTEGER NOT NULL, body TEXT, created INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS audit_log(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, actor_id INTEGER,
+        action TEXT, target TEXT DEFAULT '', details TEXT DEFAULT '', created INTEGER
+    );
+    """)
+    CON.commit()
+
+def added_audit(actor, action, target='', details=''):
+    try:
+        ex("INSERT INTO audit_log(actor_id,action,target,details,created) VALUES(?,?,?,?,?)",
+           (actor, action, str(target), str(details)[:1000], int(time.time())))
+    except Exception as e:
+        log.warning("audit: %s", e)
+
+def added_ticket_kb(tid, admin=False):
+    if admin:
+        return IKM([[IKB('بستن تیکت', callback_data=f'addtkclose:{tid}')],
+                    [IKB('بازگشت به تیکت‌ها', callback_data='addtks')]])
+    return IKM([[IKB('ارسال پیام', callback_data=f'addtkmsg:{tid}')],
+                [IKB('بستن تیکت', callback_data=f'addtkclose:{tid}')]])
+
+async def added_ticket_start(update, ctx):
+    uid = update.effective_user.id
+    if get_user(uid) and get_user(uid)['banned']:
+        return await update.message.reply_text('حساب شما مسدود است.')
+    now = int(time.time())
+    t = q("SELECT * FROM support_tickets WHERE user_id=? AND status='open' ORDER BY id DESC LIMIT 1", (uid,), True)
+    if not t:
+        tid = ex("INSERT INTO support_tickets(user_id,created,updated) VALUES(?,?,?)", (uid, now, now))
+        added_audit(uid, 'ticket_open', tid)
+        text = f'🎫 تیکت #{tid} ساخته شد. پیام یا مشکل خودت را بفرست.'
+    else:
+        tid = t['id']; text = f'🎫 تیکت باز شما #{tid} است. پیام جدید را بفرست.'
+    set_state(ctx, 'addticket', tid)
+    await update.message.reply_text(text, reply_markup=IKM([[IKB('لغو', callback_data='home')]]))
+
+async def added_tickets(update, ctx):
+    uid = update.effective_user.id
+    if not is_admin(uid): return
+    rows = q("SELECT * FROM support_tickets WHERE status='open' ORDER BY updated DESC LIMIT 30")
+    if not rows: return await update.message.reply_text('تیکت باز نداریم.')
+    kb = [[IKB(f"#{r['id']} | کاربر {r['user_id']}", callback_data=f"addtk:{r['id']}")] for r in rows]
+    await update.message.reply_text('🎫 تیکت‌های باز:', reply_markup=IKM(kb))
+
+def added_ticket_text(tid):
+    t = q('SELECT * FROM support_tickets WHERE id=?', (tid,), True)
+    if not t: return None
+    msgs = q('SELECT * FROM support_messages WHERE ticket_id=? ORDER BY id ASC LIMIT 100', (tid,))
+    lines = [f"🎫 <b>تیکت #{tid}</b> | کاربر <code>{t['user_id']}</code> | {t['status']}"]
+    for m in msgs:
+        who = 'کاربر' if m['sender_id'] == t['user_id'] else f"ادمین {m['sender_id']}"
+        lines.append(f"\n<b>{who}:</b> {html.escape(m['body'] or '')}")
+    return '\n'.join(lines)
+
+async def added_ticket_callback(update, ctx):
+    cq = update.callback_query; uid = cq.from_user.id; d = cq.data
+    if d == 'addtks':
+        await cq.answer(); rows=q("SELECT * FROM support_tickets WHERE status='open' ORDER BY updated DESC LIMIT 30")
+        kb=[[IKB(f"#{r['id']} | کاربر {r['user_id']}", callback_data=f"addtk:{r['id']}")] for r in rows]
+        return await cq.edit_message_text('🎫 تیکت‌های باز:' if rows else 'تیکت باز نداریم.', reply_markup=IKM(kb) if kb else None)
+    if d.startswith('addtk:'):
+        if not is_admin(uid): return await cq.answer('دسترسی ندارید', show_alert=True)
+        tid=int(d.split(':')[1]); text=added_ticket_text(tid)
+        await cq.answer(); return await cq.edit_message_text(text or 'تیکت پیدا نشد.', parse_mode=ParseMode.HTML, reply_markup=added_ticket_kb(tid, True))
+    if d.startswith('addtkmsg:'):
+        tid=int(d.split(':')[1]); t=q('SELECT * FROM support_tickets WHERE id=? AND user_id=? AND status="open"',(tid,uid),True)
+        if not t: return await cq.answer('تیکت پیدا نشد', show_alert=True)
+        set_state(ctx,'addticket',tid); await cq.answer(); return await cq.edit_message_text('پیامت را بفرست.')
+    if d.startswith('addtkclose:'):
+        tid=int(d.split(':')[1]); t=q('SELECT * FROM support_tickets WHERE id=?',(tid,),True)
+        if not t or (t['user_id'] != uid and not is_admin(uid)): return await cq.answer('دسترسی ندارید', show_alert=True)
+        ex("UPDATE support_tickets SET status='closed',updated=? WHERE id=?",(int(time.time()),tid)); added_audit(uid,'ticket_close',tid)
+        clear_state(ctx); await cq.answer('تیکت بسته شد'); return await cq.edit_message_text(f'✅ تیکت #{tid} بسته شد.')
+
+async def added_ticket_message(update, ctx):
+    st=ctx.user_data.get('state') or []
+    if not st or st[0] != 'addticket' or not update.message or not update.message.text: return
+    uid=update.effective_user.id; tid=int(st[1]); t=q('SELECT * FROM support_tickets WHERE id=? AND status="open"',(tid,),True)
+    if not t or (t['user_id'] != uid and not is_admin(uid)): return
+    body=update.message.text.strip()
+    if not body: return
+    ex('INSERT INTO support_messages(ticket_id,sender_id,body,created) VALUES(?,?,?,?)',(tid,uid,body,int(time.time())))
+    ex('UPDATE support_tickets SET updated=?,admin_id=? WHERE id=?',(int(time.time()), uid if is_admin(uid) else 0, tid))
+    added_audit(uid,'ticket_message',tid,body)
+    if is_admin(uid):
+        try: await ctx.bot.send_message(t['user_id'], f'📩 پاسخ تیکت #{tid}:\n{html.escape(body)}', parse_mode=ParseMode.HTML)
+        except Exception: pass
+        await update.message.reply_text('✅ پاسخ ثبت و برای کاربر ارسال شد.', reply_markup=added_ticket_kb(tid, True))
+    else:
+        for a in ADMIN_IDS:
+            try: await ctx.bot.send_message(a, f'🎫 پیام جدید در تیکت #{tid} از کاربر {uid}:\n{html.escape(body)}', parse_mode=ParseMode.HTML)
+            except Exception: pass
+        await update.message.reply_text('✅ پیام ثبت شد. منتظر پاسخ پشتیبانی باش.')
+    clear_state(ctx)
+
+async def added_backup(update, ctx):
+    if not is_admin(update.effective_user.id): return
+    stamp=dt.datetime.now().strftime('%Y%m%d_%H%M%S'); path=f'{DB_PATH}.backup_{stamp}'
+    CON.commit(); shutil.copy2(DB_PATH,path); added_audit(update.effective_user.id,'database_backup',path)
+    with open(path,'rb') as f: await update.message.reply_document(f, filename=path, caption='✅ بکاپ دیتابیس آماده شد.')
+
+async def added_report(update, ctx):
+    if not is_admin(update.effective_user.id): return
+    now=int(time.time()); day=now-86400
+    users=q('SELECT COUNT(*) c FROM users',one=True)['c']; active=q("SELECT COUNT(*) c FROM services WHERE status='active' AND expire>?",(now,),True)['c']
+    sales=q("SELECT COALESCE(SUM(price),0) s FROM services WHERE created>? AND status!='deleted'",(day,),True)['s']
+    topups=q("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE created>? AND status='ok'",(day,),True)['s']
+    tickets=q("SELECT COUNT(*) c FROM support_tickets WHERE status='open'",one=True)['c']
+    added_audit(update.effective_user.id,'daily_report')
+    await update.message.reply_text(f'📊 گزارش ۲۴ ساعت اخیر\n\nکاربران: {users}\nسرویس فعال: {active}\nفروش: {money(sales)} تومان\nشارژ تأییدشده: {money(topups)} تومان\nتیکت باز: {tickets}')
+
 def main():
     init_db()
     init_db_extra()  # ➕ جدول‌های کد تخفیف / تراکنش / نام سرویس
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(init_added_features())
     load_admins()  # ➕
     app = Application.builder().token(BOT_TOKEN).build()
     app.post_init = ip_server_start  # ➕ وب‌سرور اطلاعات IP
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("emoji", cmd_emoji))
+    app.add_handler(CommandHandler("ticket", added_ticket_start))
+    app.add_handler(CommandHandler("tickets", added_tickets))
+    app.add_handler(CommandHandler("backup", added_backup))
+    app.add_handler(CommandHandler("report", added_report))
+    app.add_handler(CallbackQueryHandler(added_ticket_callback, pattern=r"^addtk"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, added_ticket_message), group=0)
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(~filters.COMMAND, on_message))
     app.job_queue.run_repeating(job_followup, interval=300, first=30)
