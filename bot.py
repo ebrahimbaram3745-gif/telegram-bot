@@ -22,7 +22,7 @@ except ImportError:
 
 # ───────────────────────── تنظیمات اصلی ─────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "7363962357").replace(" ", "").split(",") if x}
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "123456789").replace(" ", "").split(",") if x}
 # ➕ ادمین اصلی (فقط او می‌تواند ادمین اضافه/حذف کند)
 MAIN_ADMIN_ID = 7363962357
 ENV_ADMIN_IDS = set(ADMIN_IDS)  # ادمین‌های داخل تنظیمات هم ادمین اصلی حساب می‌شوند
@@ -64,6 +64,7 @@ EMOJI = {
     "bot": "⚡️", "fire": "♨️", "hello": "👋", "buy": "🛍", "subs": "✅", "wallet": "🤑",
     "test": "🆓", "support": "💬", "channel": "📣", "account": "👤", "more": "😎",
     "admin": "🛠", "back": "🔙", "m1": "1️⃣", "m3": "3️⃣", "m6": "6️⃣", "m12": "🔟",
+    "tariff1": "1️⃣", "tariff3": "3️⃣", "tariff6": "6️⃣",
     "all": "🔥", "suggest": "🤔", "gift": "🎁", "price": "💲", "volume": "🟢", "time": "⏳",
     "shop": "🏪", "card": "💳", "ok": "✅", "no": "❌", "panel": "🔌", "plan": "📦",
     "ban": "🚫", "unban": "♻️", "text": "✏️", "stats": "📊", "search": "🔎", "bridge": "🌉",
@@ -1200,7 +1201,7 @@ async def do_test(update, ctx, uid):
 
 async def page_more(update, uid):
     kb = [section_row("more", btn("راهنما", "help", None, "help"), btn("قوانین", "rules", None, "rules")),
-          section_row("more", btn("زیرمجموعه‌گیری", "ref", GREEN, "ref"), btn("حساب کاربری", "account", None, "account"))]
+          section_row("more", btn("زیرمجموعه‌گیری", "ref", GREEN, "ref"), btn("تعرفه ها", "tariffs", None, "price"))]
     kb = [section_row("more", btn("اطلاعات IP من", "ip", GREEN, "ip")),
           section_row("more", btn("گزارش مصرف", "usage", None, "usage"), btn("پیشنهاد سرویس", "suggest", None, "suggest")),
           section_row("more", btn("تنظیمات من", "myset", None, "mysettings"), btn("تنظیم یادآورها", "remind", None, "remind")),
@@ -1209,6 +1210,16 @@ async def page_more(update, uid):
 
 # ➕ صفحات جدید سایر امکانات
 def back_more(): return [row(btn("بازگشت به سایر امکانات", "more", RED, "back"))]
+
+async def page_tariffs(update, ctx, uid):
+    """منوی تعرفه‌ها؛ قیمت و پلن‌ها از همان داده‌های فعلی بخش خرید خوانده می‌شوند."""
+    text = "💲 <b>تعرفه ها</b>\n\nمدت اشتراک را انتخاب کنید:"
+    kb = [
+        row(btn("یک ماهه", "pl:1", BLUE, "tariff1")),
+        row(btn("سه ماهه", "pl:3", BLUE, "tariff3")),
+        row(btn("شش ماهه", "pl:6", BLUE, "tariff6")),
+    ] + back_more()
+    await show(update, text, kb)
 
 async def page_ip(update, uid):
     link = ip_link(uid)
@@ -1727,6 +1738,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if d == "test": return await do_test(update, ctx, uid)
     if d == "supportmenu": return await added_support_menu(update, ctx)
     if d == "more": return await page_more(update, uid)
+    if d == "tariffs": return await page_tariffs(update, ctx, uid)
     if d in ("help", "rules"): return await show(update, render(d), [row(btn("بازگشت", "more", RED, "back"))])
     if d == "ref":
         me = await ctx.bot.get_me()
