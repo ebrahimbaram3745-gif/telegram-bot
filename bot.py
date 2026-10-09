@@ -3290,14 +3290,14 @@ async def _cardpay_start(update, ctx, uid, plan_id, panel_id):
     oid = ex("INSERT INTO card_orders(user_id,plan_id,panel_id,amount,created,updated) VALUES(?,?,?,?,?,?)",
              (uid, plan_id, panel_id, price, now, now))
     DC_PENDING.pop(uid, None)
-    text = (f"💳 <b>پرداخت کارت‌به‌کارت</b>\n\n"
+    text = (f"💳 <b>پرداخت کارت به کارت</b>\n\n"
             f"لطفاً مبلغ <b>{money(price)} تومان</b> را به شماره کارت زیر واریز کنید:\n\n"
-            f"<code>{html.escape(S('card_number'))}</code>\n"
-            f"👤 صاحب کارت: <b>{html.escape(S('card_owner'))}</b>\n\n"
-            "⏳ این تراکنش تا ۳۰ دقیقه معتبر است.\n"
-            "بعد از واریز، روی «پرداخت کردم» بزنید و عکس رسید را ارسال کنید.")
-    kb = [row(_copy_text_btn("کپی شماره کارت", S("card_number"), "copycard")),
-          row(_copy_text_btn("کپی مبلغ (ریال)", price * 10, "copyamount")),
+            f"<code>{html.escape(S('card_number'))}</code>\n\n"
+            "⏳ این تراکنش تا ۳۰ دقیقه مهلت پرداخت دارد.\n\n"
+            "📸 پس از واریز، روی دکمه «پرداخت کردم» بزنید و عکس رسید را ارسال کنید.")
+    # همان چیدمان تصویر: دو دکمه کپی کنار هم، سپس تأیید سبز و بازگشت.
+    kb = [row(_copy_text_btn("کپی مبلغ (ریال)", price * 10, "copyamount"),
+              _copy_text_btn("کپی شماره کارت", S("card_number"), "copycard")),
           row(btn("پرداخت کردم، ارسال رسید", f"ccpaid:{oid}", GREEN, "ok")),
           row(btn("بازگشت به روش‌ها", f"inv:{plan_id}:{panel_id}", RED, "back"))]
     return await show(update, text, kb)
@@ -3340,7 +3340,26 @@ async def on_callback(update, ctx):
                 ex("UPDATE card_orders SET status='ok',updated=? WHERE id=?", (int(time.time()), order["id"]))
                 trx_log(order["user_id"], "card_buy", sid, p["id"], pn["id"], p["gb"], p["days"], order["amount"])
                 if not manual:
-                    await deliver(ctx, order["user_id"], sid)
+                    try:
+                        await deliver(ctx, order["user_id"], sid)
+                    except Exception:
+                        # پرداخت و ساخت سرویس موفق بوده؛ خطای ارسال نباید باعث
+                        # تأیید دوباره و ساخت سرویس تکراری شود.
+                        log.exception("card service delivery failed sid=%s", sid)
+                        for a in ADMIN_IDS:
+                            try:
+                                await ctx.bot.send_message(
+                                    a, f"⚠️ سرویس #{sid} ساخته شد اما ارسال به کاربر ناموفق بود؛ "
+                                       f"از صفحه سرویس دوباره لینک را ارسال کنید.")
+                            except Exception:
+                                pass
+                        try:
+                            await ctx.bot.send_message(
+                                order["user_id"],
+                                "✅ پرداخت تأیید و سرویس ساخته شد، اما ارسال خودکار لینک ناموفق بود. "
+                                "از بخش «اشتراک‌های من» سرویس را باز کنید.")
+                        except Exception:
+                            pass
                 else:
                     await ctx.bot.send_message(order["user_id"], "✅ پرداخت تأیید شد. کانفیگ شما به‌زودی ارسال می‌شود.")
                 return await update.callback_query.edit_message_caption(f"✅ تأیید و سرویس ساخته شد #{pid}")
