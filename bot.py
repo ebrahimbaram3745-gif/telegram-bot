@@ -2132,14 +2132,32 @@ async def init_added_features():
     );
     """)
     CON.commit()
+    # افزودنی‌های رابط تیکت: فقط ثبت تنظیمات/کلیدها، بدون حذف یا تغییر قابلیت‌های قبلی
+    EMOJI.update({"ticket_reply": "↩️", "ticket_close": "🔒"})
+    BTN_GROUPS.update({
+        "ticket_reply": "دکمه پاسخ تیکت",
+        "ticket_close": "دکمه بستن تیکت",
+        "ticket_open": "دکمه باز کردن تیکت",
+    })
+    for _n in BTN_GROUPS.values():
+        if _n not in BTN_NAMES:
+            BTN_NAMES.append(_n)
 
 def added_audit(actor, action, target='', details=''):
     try: ex("INSERT INTO audit_log(actor_id,action,target,details,created) VALUES(?,?,?,?,?)", (actor,action,str(target),str(details)[:1000],int(time.time())))
     except Exception as e: log.warning("audit: %s", e)
 
 def added_ticket_kb(tid, admin=False):
-    if admin: return IKM([[btn('بستن تیکت', f'addtkclose:{tid}', RED, 'delsrv')],[btn('بازگشت به تیکت‌ها','addtks',None,'back')]])
-    return IKM([[btn('ارسال پیام', f'addtkmsg:{tid}', BLUE, 'ticket')],[btn('بستن تیکت', f'addtkclose:{tid}', RED, 'delsrv')]])
+    if admin:
+        return IKM([
+            [btn('پاسخ', f'addtkreply:{tid}', BLUE, 'ticket_reply')],
+            [btn('بستن تیکت', f'addtkclose:{tid}', RED, 'ticket_close')],
+            [btn('بازگشت به تیکت‌ها', 'addtks', None, 'back')]
+        ])
+    return IKM([
+        [btn('پاسخ', f'addtkmsg:{tid}', BLUE, 'ticket_reply')],
+        [btn('بستن تیکت', f'addtkclose:{tid}', RED, 'ticket_close')]
+    ])
 
 async def added_support_menu(update, ctx):
     await show(update, f"{E('support')} <b>پشتیبانی</b>\n\nیکی از گزینه‌ها را انتخاب کن:",
@@ -2190,6 +2208,15 @@ async def added_ticket_callback(update,ctx):
         tid=int(d.split(':')[1]); t=q('SELECT * FROM support_tickets WHERE id=? AND user_id=? AND status="open"',(tid,uid),True)
         if not t:return await cq.answer('تیکت پیدا نشد',show_alert=True)
         set_state(ctx,'addticket',tid); await cq.answer(); return await cq.edit_message_text('پیامت را بفرست.')
+    if d.startswith('addtkreply:'):
+        if not is_admin(uid): return await cq.answer('دسترسی ندارید',show_alert=True)
+        tid=int(d.split(':')[1]); t=q('SELECT * FROM support_tickets WHERE id=? AND status="open"',(tid,),True)
+        if not t:return await cq.answer('تیکت پیدا نشد یا بسته است',show_alert=True)
+        set_state(ctx,'addticketreply',tid); await cq.answer()
+        return await cq.edit_message_text(
+            f'↩️ پاسخ تیکت #{tid} را بفرست:',
+            reply_markup=added_ticket_kb(tid,True)
+        )
     if d.startswith('addtkclose:'):
         tid=int(d.split(':')[1]); t=q('SELECT * FROM support_tickets WHERE id=?',(tid,),True)
         if not t or (t['user_id']!=uid and not is_admin(uid)): return await cq.answer('دسترسی ندارید',show_alert=True)
@@ -2198,20 +2225,34 @@ async def added_ticket_callback(update,ctx):
 
 async def added_ticket_message(update,ctx):
     st=ctx.user_data.get('state') or []
-    if not st or st[0]!='addticket' or not update.message or not update.message.text:return
+    if not st or st[0] not in ('addticket', 'addticketreply') or not update.message or not update.message.text:return
     uid=update.effective_user.id; tid=int(st[1]); t=q('SELECT * FROM support_tickets WHERE id=? AND status="open"',(tid,),True)
     if not t or (t['user_id']!=uid and not is_admin(uid)):return
     body=update.message.text.strip()
     if not body:return
     ex('INSERT INTO support_messages(ticket_id,sender_id,body,created) VALUES(?,?,?,?)',(tid,uid,body,int(time.time())))
     ex('UPDATE support_tickets SET updated=?,admin_id=? WHERE id=?',(int(time.time()),uid if is_admin(uid) else 0,tid)); added_audit(uid,'ticket_message',tid,body)
-    if is_admin(uid):
+    if is_admin(uid) and st[0] == 'addticketreply':
+        try: await ctx.bot.send_message(t['user_id'],f'📩 پاسخ تیکت #{tid}:\n{html.escape(body)}',parse_mode=ParseMode.HTML)
+        except Exception:pass
+        await update.message.reply_text('✅ پیام شما به کاربر ارسال شد.',reply_markup=added_ticket_kb(tid,True))
+        try:
+            await ctx.bot.send_message(
+                t['user_id'],
+                f'📩 <b>پاسخ پشتیبانی برای تیکت #{tid}</b>\n\n{html.escape(body)}',
+                parse_mode=ParseMode.HTML,
+                reply_markup=added_ticket_kb(tid,False)
+            )
+        except Exception:
+            pass
+    elif is_admin(uid):
         try: await ctx.bot.send_message(t['user_id'],f'📩 پاسخ تیکت #{tid}:\n{html.escape(body)}',parse_mode=ParseMode.HTML)
         except Exception:pass
         await update.message.reply_text('✅ پاسخ ثبت و برای کاربر ارسال شد.',reply_markup=added_ticket_kb(tid,True))
     else:
         for a in ADMIN_IDS:
-            try: await ctx.bot.send_message(a,f'🎫 پیام جدید در تیکت #{tid} از کاربر {uid}:\n{html.escape(body)}',parse_mode=ParseMode.HTML)
+            try: await ctx.bot.send_message(a,f'🎫 پیام جدید در تیکت #{tid} از کاربر {uid}:\n{html.escape(body)}',
+                                            parse_mode=ParseMode.HTML, reply_markup=added_ticket_kb(tid,True))
             except Exception:pass
         await update.message.reply_text('✅ پیام ثبت شد. منتظر پاسخ پشتیبانی باش.')
     clear_state(ctx)
@@ -2227,6 +2268,24 @@ async def added_report(update,ctx):
     users=q('SELECT COUNT(*) c FROM users',one=True)['c']; active=q("SELECT COUNT(*) c FROM services WHERE status='active' AND expire>?",(now,),True)['c']; sales=q("SELECT COALESCE(SUM(price),0) s FROM services WHERE created>? AND status!='deleted'",(day,),True)['s']; topups=q("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE created>? AND status='ok'",(day,),True)['s']; tickets=q("SELECT COUNT(*) c FROM support_tickets WHERE status='open'",one=True)['c']
     added_audit(update.effective_user.id,'daily_report'); await update.message.reply_text(f'📊 گزارش ۲۴ ساعت اخیر\n\nکاربران: {users}\nسرویس فعال: {active}\nفروش: {money(sales)} تومان\nشارژ تأییدشده: {money(topups)} تومان\nتیکت باز: {tickets}')
 
+async def added_panel_integration_test(update, ctx):
+    """تست اتصال همه پنل‌های ثبت‌شده؛ فقط خواندنی و بدون ساخت/حذف سرویس."""
+    if not is_admin(update.effective_user.id):
+        return
+    panels = q("SELECT * FROM panels ORDER BY id")
+    if not panels:
+        return await update.message.reply_text("🔌 هیچ پنلی برای تست ثبت نشده است.")
+    out = ["🧪 <b>تست اتصال پنل‌ها</b>"]
+    for p in panels:
+        if not p["active"]:
+            out.append(f"⏸ {html.escape(p['name'])} ({p['ptype']}): غیرفعال")
+            continue
+        ok, msg = await panel_test(p)
+        clean = re.sub(r"<[^>]+>", "", msg or "")
+        out.append(f"{'✅' if ok else '❌'} {html.escape(p['name'])} ({p['ptype']}): {html.escape(clean)}")
+        added_audit(update.effective_user.id, "panel_integration_test", p["id"], f"ok={ok}")
+    await update.message.reply_text("\n".join(out), parse_mode=ParseMode.HTML)
+
 def main():
     init_db()
     init_db_extra()  # ➕ جدول‌های کد تخفیف / تراکنش / نام سرویس
@@ -2241,6 +2300,7 @@ def main():
     app.add_handler(CommandHandler("tickets", added_tickets))
     app.add_handler(CommandHandler("backup", added_backup))
     app.add_handler(CommandHandler("report", added_report))
+    app.add_handler(CommandHandler("paneltest", added_panel_integration_test))
     app.add_handler(CallbackQueryHandler(added_ticket_callback, pattern=r"^addtk"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, added_ticket_message), group=-1)
     app.add_handler(CallbackQueryHandler(on_callback))
