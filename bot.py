@@ -568,6 +568,38 @@ async def _mz_create(c, t, body, h):
     if r.status_code >= 400: raise Exception(f"HTTP {r.status_code}: {r.text[:300]}")
     return r.json()
 
+def _pg_group_list(payload):
+    """Normalize the different group response shapes used by Pasarguard versions."""
+    if isinstance(payload, list):
+        return payload
+    if not isinstance(payload, dict):
+        return []
+    for key in ("groups", "data", "items", "results"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            return value
+        if isinstance(value, dict):
+            found = _pg_group_list(value)
+            if found:
+                return found
+    return []
+
+async def _pg_active_group_ids(c, h):
+    for path in ("/api/groups", "/api/group"):
+        try:
+            r = await c.get(path, headers=h)
+            if r.status_code >= 400:
+                continue
+            groups = _pg_group_list(r.json())
+            ids = [int(g["id"]) for g in groups
+                   if isinstance(g, dict) and str(g.get("id", "")).isdigit()
+                   and not g.get("is_disabled", g.get("disabled", False))]
+            if ids:
+                return ids
+        except Exception as e:
+            log.warning("pasarguard groups %s: %s", path, e)
+    return []
+
 def _xui_root(t): return XUI_PREFIX[t].split("/api")[0].split("/API")[0]   # /panel یا /xui
 
 async def _xui_inbound(c, t, inb):
@@ -741,13 +773,10 @@ async def panel_create(p, username, gb, days):
                 body["inbounds"] = {}
             else:
                 body["group_ids"] = _ids(extra); body["proxy_settings"] = {}
-                if not body["group_ids"]:  # ➕ اگر گروه وارد نشده، همه گروه‌های فعال پنل
-                    try:
-                        gj = (await c.get("/api/groups", headers=h)).json()
-                        gl = gj.get("groups", []) if isinstance(gj, dict) else (gj or [])
-                        body["group_ids"] = [g["id"] for g in gl if not g.get("is_disabled")]
-                    except Exception as e:
-                        log.warning("pasarguard groups %s", e)
+                if not body["group_ids"]:  # اگر گروه تنظیم نشده، گروه‌های فعال پنل
+                    body["group_ids"] = await _pg_active_group_ids(c, h)
+                if not body["group_ids"]:
+                    raise Exception("در پنل پاسارگاد هیچ گروه فعالی پیدا نشد؛ ابتدا یک گروه فعال بسازید یا شناسه گروه را در تنظیمات پنل وارد کنید.")
             j = await _mz_create(c, t, body, h)  # ➕ با پیام خطای دقیق + سازگاری پاسارگارد
             sub, links = j.get("subscription_url") or "", j.get("links") or []
         elif t == "marzneshin":
@@ -3295,7 +3324,6 @@ async def _cardpay_start(update, ctx, uid, plan_id, panel_id):
             f"<code>{html.escape(S('card_number'))}</code>\n\n"
             "⏳ این تراکنش تا ۳۰ دقیقه مهلت پرداخت دارد.\n\n"
             "📸 پس از واریز، روی دکمه «پرداخت کردم» بزنید و عکس رسید را ارسال کنید.")
-    # همان چیدمان تصویر: دو دکمه کپی کنار هم، سپس تأیید سبز و بازگشت.
     kb = [row(_copy_text_btn("کپی مبلغ (ریال)", price * 10, "copyamount"),
               _copy_text_btn("کپی شماره کارت", S("card_number"), "copycard")),
           row(btn("پرداخت کردم، ارسال رسید", f"ccpaid:{oid}", GREEN, "ok")),
@@ -3343,16 +3371,7 @@ async def on_callback(update, ctx):
                     try:
                         await deliver(ctx, order["user_id"], sid)
                     except Exception:
-                        # پرداخت و ساخت سرویس موفق بوده؛ خطای ارسال نباید باعث
-                        # تأیید دوباره و ساخت سرویس تکراری شود.
                         log.exception("card service delivery failed sid=%s", sid)
-                        for a in ADMIN_IDS:
-                            try:
-                                await ctx.bot.send_message(
-                                    a, f"⚠️ سرویس #{sid} ساخته شد اما ارسال به کاربر ناموفق بود؛ "
-                                       f"از صفحه سرویس دوباره لینک را ارسال کنید.")
-                            except Exception:
-                                pass
                         try:
                             await ctx.bot.send_message(
                                 order["user_id"],
