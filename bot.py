@@ -569,7 +569,6 @@ async def _mz_create(c, t, body, h):
     return r.json()
 
 def _pg_group_list(payload):
-    """Normalize the different group response shapes used by Pasarguard versions."""
     if isinstance(payload, list):
         return payload
     if not isinstance(payload, dict):
@@ -585,7 +584,10 @@ def _pg_group_list(payload):
     return []
 
 async def _pg_active_group_ids(c, h):
-    for path in ("/api/groups", "/api/group"):
+    # Pasarguard versions differ: some paginate /groups and newer versions
+    # expose /groups/simple. Read-only lookup, no project data is changed.
+    for path in ("/api/groups?all=true", "/api/groups/simple?all=true",
+                 "/api/groups", "/api/groups/simple", "/api/group"):
         try:
             r = await c.get(path, headers=h)
             if r.status_code >= 400:
@@ -773,10 +775,10 @@ async def panel_create(p, username, gb, days):
                 body["inbounds"] = {}
             else:
                 body["group_ids"] = _ids(extra); body["proxy_settings"] = {}
-                if not body["group_ids"]:  # اگر گروه تنظیم نشده، گروه‌های فعال پنل
+                if not body["group_ids"]:
                     body["group_ids"] = await _pg_active_group_ids(c, h)
                 if not body["group_ids"]:
-                    raise Exception("در پنل پاسارگاد هیچ گروه فعالی پیدا نشد؛ ابتدا یک گروه فعال بسازید یا شناسه گروه را در تنظیمات پنل وارد کنید.")
+                    raise Exception("هیچ گروه فعالی در پاسارگارد پیدا نشد؛ یک گروه فعال بسازید یا شناسه گروه را در تنظیمات پنل وارد کنید.")
             j = await _mz_create(c, t, body, h)  # ➕ با پیام خطای دقیق + سازگاری پاسارگارد
             sub, links = j.get("subscription_url") or "", j.get("links") or []
         elif t == "marzneshin":
