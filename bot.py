@@ -22,7 +22,7 @@ except ImportError:
 
 # ───────────────────────── تنظیمات اصلی ─────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "123456789").replace(" ", "").split(",") if x}
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "7363962357").replace(" ", "").split(",") if x}
 # ➕ ادمین اصلی (فقط او می‌تواند ادمین اضافه/حذف کند)
 MAIN_ADMIN_ID = 7363962357
 ENV_ADMIN_IDS = set(ADMIN_IDS)  # ادمین‌های داخل تنظیمات هم ادمین اصلی حساب می‌شوند
@@ -75,7 +75,7 @@ EMOJI = {
     "ip": "📍", "usage": "📊", "mysettings": "⚙️", "remind": "🔔", "transfer": "🔁", "ipbox": "🛡",  # ➕
 }
 # ➕ ایموجی دکمه‌های جدید (تمدید، حذف، تغییر نام، کد تخفیف، تراکنش‌ها)
-EMOJI.update({"renew": "🔄", "delsrv": "🗑", "rename": "📝", "discount": "🎟", "trx": "🧾", "ticket": "🎫", "reply": "↩️", "direct": "👤"})
+EMOJI.update({"renew": "🔄", "delsrv": "🗑", "rename": "📝", "discount": "🎟", "trx": "🧾"})
 
 # ───────────────────────── متن‌های قابل ویرایش ─────────────────────────
 # متغیرها: {BOT} {USER} {ID} {BALANCE} {PRICE} {GB} {DAYS} {LINK} {SERVICES} {DATE} ...
@@ -206,7 +206,7 @@ BOT_REF = {"bot": None, "username": "", "srv": None, "last": {}}
 
 PANEL_TYPES = [("marzban", "مرزبان"), ("marzneshin", "مرزنشین"), ("pasarguard", "پاسارگارد"),
                ("sanaei", "ثنایی / 3x-UI"), ("alireza", "علیرضا"), ("xui", "X-UI عمومی"),
-               ("manual", "فروش دستی")]
+               ("manual", "فروش دستی"), ("spider", "🕷 SpiderPanel")]
 SOON_PANELS = ["هیدیفای", "Guard", "WGDashboard", "s-ui", "IBSNG", "میکروتیک"]
 XUI_PREFIX = {"sanaei": "/panel/api/inbounds", "alireza": "/xui/API/inbounds", "xui": "/xui/API/inbounds"}
 EXTRA_HINT = {
@@ -215,6 +215,7 @@ EXTRA_HINT = {
     "marzneshin": "آیدی سرویس‌ها با کاما مثل 1,2",
     "sanaei": "آیدی اینباند|آدرس ساب|آدرس سرور  مثل  1|https://sub.domain.com:2096/sub  (فقط آیدی اینباند هم کافی است، بقیه خودکار)",
     "alireza": "آیدی اینباند|آدرس ساب", "xui": "آیدی اینباند|آدرس ساب",
+    "spider": "برای SpiderPanel فقط آدرس پنل و رمز عبور لازم است (یوزر اختیاری)",
 }
 
 # ───────────────────────── دیتابیس ─────────────────────────
@@ -710,11 +711,20 @@ async def _xlogin(c, p):
 
 def _ids(extra): return [int(x) for x in (extra or "").replace(" ", "").split(",") if x.isdigit()]
 
+async def _spider_login(c, p):
+    """ورود افزوده به SpiderPanel؛ نشست همان کلاینت برای درخواست بعدی حفظ می‌شود."""
+    r = await c.post("/api/login", json={"password": p["password"]})
+    r.raise_for_status()
+    j = r.json() if r.content else {}
+    if isinstance(j, dict) and j.get("success") is False:
+        raise Exception(j.get("detail") or j.get("message") or "ورود به SpiderPanel ناموفق بود")
+    return j
+
 async def panel_test(p):
     if p["ptype"] == "manual": return True, "حالت فروش دستی (بدون اتصال)"
     try:
         async with _http(p) as c:
-            await (_xlogin(c, p) if p["ptype"] in XUI_PREFIX else _token(c, p))
+            await (_xlogin(c, p) if p["ptype"] in XUI_PREFIX else (_spider_login(c, p) if p["ptype"] == "spider" else _token(c, p)))
         return True, "اتصال موفق ✅"
     except Exception as e:
         return False, f"خطا در اتصال: {html.escape(str(e))[:300]}"
@@ -748,6 +758,15 @@ async def panel_create(p, username, gb, days):
                     "data_limit": limit, "data_limit_reset_strategy": "no_reset"}
             r = await c.post("/api/users", json=body, headers=h); r.raise_for_status(); j = r.json()
             sub = j.get("subscription_url") or ""
+        elif t == "spider":
+            await _spider_login(c, p)
+            body = {"username": username, "expire": exp, "data_limit": limit}
+            r = await c.post("/api/users", json=body)
+            r.raise_for_status(); j = r.json() if r.content else {}
+            sub = j.get("subscription_url") or j.get("sub_url") or j.get("subscription") or ""
+            if sub and sub.startswith("/"): sub = p["url"].rstrip("/") + sub
+            links = j.get("links") or []
+
         elif t in XUI_PREFIX:
             await _xlogin(c, p)
             parts = extra.split("|")
@@ -788,6 +807,12 @@ async def panel_info(p, username):
             j = (await c.get(f"/api/users/{username}", headers=h)).json()
             used, total, exp = j.get("used_traffic", 0), j.get("data_limit") or 0, j.get("expire_date")
             st = "active" if j.get("is_active", j.get("enabled")) else "disabled"
+        elif t == "spider":
+            await _spider_login(c, p)
+            rows = (await c.get("/api/users")).json()
+            rows = rows.get("users", rows) if isinstance(rows, dict) else rows
+            j = next((x for x in (rows or []) if x.get("username") == username or x.get("name") == username), {})
+            used = j.get("used_traffic", j.get("used", 0)); total = j.get("data_limit", j.get("limit", 0)); exp = j.get("expire", j.get("expiry")); st = "active" if j.get("enabled", j.get("active", True)) else "disabled"
         elif t in XUI_PREFIX:
             await _xlogin(c, p)
             j = (await c.get(f"{XUI_PREFIX[t]}/getClientTraffics/{username}")).json().get("obj") or {}
@@ -807,7 +832,7 @@ def main_kb(uid):
         section_row("start", btn("خرید اشتراک", "buy", GREEN, "buy")),
         section_row("start", btn("اشتراک ها", "subs", None, "subs"), btn("افزایش موجودی", "account", None, "wallet")),
         section_row("start", btn("تست قبل از خرید", "test", RED, "test")),
-        section_row("start", btn("پشتیبانی", "supportmenu", None, "support"), btn("کانال", url=S("channel_url"), ek="channel"), btn("حساب", "account", None, "account")),
+        section_row("start", btn("پشتیبانی", url=S("support_url"), ek="support"), btn("کانال", url=S("channel_url"), ek="channel"), btn("حساب", "account", None, "account")),
         section_row("start", btn("سایر امکانات", "more", None, "more")),
     ]
     if is_admin(uid):
@@ -1394,6 +1419,10 @@ async def panel_renew(p, username, gb, exp):
             if r.status_code >= 400: raise Exception(f"HTTP {r.status_code}: {r.text[:300]}")
             try: await c.post(f"/api/users/{username}/enable", headers=h)
             except Exception: pass
+        elif t == "spider":
+            await _spider_login(c, p)
+            r = await c.delete(f"/api/users/{username}")
+            if r.status_code >= 400 and r.status_code != 404: r.raise_for_status()
         elif t in XUI_PREFIX:
             await _xlogin(c, p)
             inb, inbound, client = await _xui_find(c, t, p, username)
@@ -1415,6 +1444,10 @@ async def panel_delete(p, username):
             h = await _token(c, p)
             r = await c.delete(f"/api/{'users' if t == 'marzneshin' else 'user'}/{username}", headers=h)
             if r.status_code >= 400 and r.status_code != 404: raise Exception(f"HTTP {r.status_code}: {r.text[:300]}")
+        elif t == "spider":
+            await _spider_login(c, p)
+            r = await c.patch(f"/api/users/{username}", json={"expire": exp, "data_limit": limit})
+            r.raise_for_status()
         elif t in XUI_PREFIX:
             await _xlogin(c, p)
             inb, inbound, client = await _xui_find(c, t, p, username)
@@ -1641,7 +1674,6 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         except Exception: pass
         return await show(update, f"✅ سرویس <code>{html.escape(s['username'])}</code> به کاربر <code>{b}</code> منتقل شد.", back_more())
     if d == "test": return await do_test(update, ctx, uid)
-    if d == "supportmenu": return await support_menu_extra(update, ctx)
     if d == "more": return await page_more(update, uid)
     if d in ("help", "rules"): return await show(update, render(d), [row(btn("بازگشت", "more", RED, "back"))])
     if d == "ref":
@@ -1686,8 +1718,12 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if d == "a:panels": return await admin_panels(update)
     if d == "a:plans": return await admin_plans(update)
     if d == "pn":
-        kb = [row(btn(n, f"pn:{t}", BLUE)) for t, n in PANEL_TYPES]
-        kb += [row(btn(f"{n} (به‌زودی)", "soon")) for n in SOON_PANELS]
+        # چیدمان جدید فقط ظاهر منوی انتخاب را بهتر می‌کند؛ همه گزینه‌های قبلی حفظ شده‌اند.
+        supported = [btn(n, f"pn:{t}", BLUE, "panel") for t, n in PANEL_TYPES if t != "spider"]
+        soon = [btn(f"{n} (به‌زودی)", "soon", None, "soon") for n in SOON_PANELS]
+        kb = [row(btn("➕ افزودن پنل جدید", "pn:spider", GREEN, "addbal"))]
+        kb += [row(*supported[i:i+2]) for i in range(0, len(supported), 2)]
+        kb += [row(*soon[i:i+2]) for i in range(0, len(soon), 2)]
         return await show(update, "نوع پنل را انتخاب کن:", kb + admin_back("a:panels"))
     if d == "soon": return await cq.answer("به‌زودی اضافه می‌شود", show_alert=True)
     if d.startswith("pn:"):
@@ -2110,87 +2146,15 @@ async def job_followup(ctx: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             log.warning("followup %s: %s", s["id"], e)
 
-
-# ───────────────────────── تیکت پشتیبانی افزوده ─────────────────────────
-def init_support_extra():
-    CON.executescript("""
-    CREATE TABLE IF NOT EXISTS support_tickets(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,status TEXT DEFAULT 'open',created INTEGER,updated INTEGER);
-    CREATE TABLE IF NOT EXISTS support_messages(id INTEGER PRIMARY KEY AUTOINCREMENT,ticket_id INTEGER NOT NULL,sender_id INTEGER NOT NULL,body TEXT,created INTEGER);
-    """); CON.commit()
-
-def support_buttons(tid, admin=False):
-    if admin:
-        return IKM([[btn('بستن تیکت',f'xtclose:{tid}',RED,'delsrv'),btn('پاسخ',f'xtreply:{tid}',GREEN,'reply')]])
-    return IKM([[btn('ارسال پیام',f'xtmsg:{tid}',BLUE,'ticket')],[btn('بستن تیکت',f'xtclose:{tid}',RED,'delsrv')]])
-
-async def support_menu_extra(update, ctx):
-    await show(update, f'{E("support")} <b>پشتیبانی</b>\n\nگزینه موردنظر را انتخاب کن:',
-               [row(btn('باز کردن تیکت','xtopen',BLUE,'ticket')), row(btn('ارتباط مستقیم',url=S('support_url'),ek='direct'))] + back_home())
-
-async def support_open_extra(update, ctx):
-    uid=update.effective_user.id; now=int(time.time())
-    t=q("SELECT * FROM support_tickets WHERE user_id=? AND status='open' ORDER BY id DESC LIMIT 1",(uid,),True)
-    if t: tid=t['id']
-    else: tid=ex('INSERT INTO support_tickets(user_id,status,created,updated) VALUES(?,?,?,?)',(uid,'open',now,now))
-    set_state(ctx,'xticket',tid)
-    await show(update,f'🎫 تیکت #{tid} آماده است. پیام خودت را بفرست.',[row(btn('لغو','home',RED,'no'))])
-
-def support_user_info(tid):
-    t=q('SELECT * FROM support_tickets WHERE id=?',(tid,),True)
-    if not t:return None
-    u=get_user(t['user_id']); name=html.escape((u['name'] if u else '') or 'بدون نام'); username=html.escape((u['username'] if u else '') or 'ندارد'); phone=html.escape((u['phone'] if u else '') or 'ثبت نشده')
-    return t,f'👤 نام: <b>{name}</b>\n🔹 یوزرنیم: @{username}\n🆔 آیدی: <code>{t["user_id"]}</code>\n📱 شماره: {phone}'
-
-async def support_callback_extra(update,ctx):
-    cq=update.callback_query; uid=cq.from_user.id; d=cq.data
-    if d=='xtopen': await cq.answer(); return await support_open_extra(update,ctx)
-    if d.startswith('xtmsg:'):
-        tid=int(d[6:]); t=q("SELECT * FROM support_tickets WHERE id=? AND user_id=? AND status='open'",(tid,uid),True)
-        if not t:return await cq.answer('تیکت بسته است',show_alert=True)
-        set_state(ctx,'xticket',tid); await cq.answer(); return await cq.edit_message_text('پیام جدیدت را بفرست.')
-    if d.startswith('xtreply:'):
-        if not is_admin(uid):return await cq.answer('دسترسی ندارید',show_alert=True)
-        tid=int(d[8:]); t=q("SELECT * FROM support_tickets WHERE id=? AND status='open'",(tid,),True)
-        if not t:return await cq.answer('تیکت بسته است',show_alert=True)
-        set_state(ctx,'xadminreply',tid); await cq.answer(); return await cq.edit_message_text('✍️ پاسخ تیکت را بنویسید:')
-    if d.startswith('xtclose:'):
-        tid=int(d[8:]); t=q('SELECT * FROM support_tickets WHERE id=?',(tid,),True)
-        if not t or (t['user_id']!=uid and not is_admin(uid)):return await cq.answer('دسترسی ندارید',show_alert=True)
-        ex("UPDATE support_tickets SET status='closed',updated=? WHERE id=?",(int(time.time()),tid)); clear_state(ctx); await cq.answer('تیکت بسته شد'); return await cq.edit_message_text(f'✅ تیکت #{tid} بسته شد. امکان پاسخ‌گویی بسته است.')
-
-async def support_message_extra(update,ctx):
-    st=ctx.user_data.get('state') or []; m=update.message
-    if not st or st[0] not in ('xticket','xadminreply') or not m or not m.text:return
-    uid=update.effective_user.id; kind=st[0]; tid=int(st[1]); t=q("SELECT * FROM support_tickets WHERE id=? AND status='open'",(tid,),True)
-    if not t or (kind=='xticket' and t['user_id']!=uid) or (kind=='xadminreply' and not is_admin(uid)):return
-    body=m.text.strip();
-    if not body:return
-    ex('INSERT INTO support_messages(ticket_id,sender_id,body,created) VALUES(?,?,?,?)',(tid,uid,body,int(time.time())))
-    ex('UPDATE support_tickets SET updated=? WHERE id=?',(int(time.time()),tid))
-    if kind=='xticket':
-        info=support_user_info(tid)[1]; text=f'🎫 <b>تیکت جدید #{tid}</b>\n{info}\n\n💬 <b>پیام کاربر:</b>\n{html.escape(body)}'
-        for a in ADMIN_IDS:
-            try: await ctx.bot.send_message(a,text,parse_mode=ParseMode.HTML,reply_markup=support_buttons(tid,True))
-            except Exception: pass
-        await m.reply_text('✅ پیام برای پشتیبانی ارسال شد.')
-    else:
-        try: await ctx.bot.send_message(t['user_id'],f'📩 پاسخ پشتیبانی برای تیکت #{tid}:\n{html.escape(body)}',parse_mode=ParseMode.HTML)
-        except Exception: pass
-        await m.reply_text('✅ پاسخ برای کاربر ارسال شد.')
-    clear_state(ctx)
-
 def main():
     init_db()
     init_db_extra()  # ➕ جدول‌های کد تخفیف / تراکنش / نام سرویس
-    init_support_extra()
     load_admins()  # ➕
     app = Application.builder().token(BOT_TOKEN).build()
     app.post_init = ip_server_start  # ➕ وب‌سرور اطلاعات IP
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("emoji", cmd_emoji))
-    app.add_handler(CallbackQueryHandler(support_callback_extra, pattern=r"^xt"))
     app.add_handler(CallbackQueryHandler(on_callback))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, support_message_extra), group=-1)
     app.add_handler(MessageHandler(~filters.COMMAND, on_message))
     app.job_queue.run_repeating(job_followup, interval=300, first=30)
     log.info("bot started")
