@@ -358,18 +358,26 @@ async def admin_admins(update):
 
 # ➕ ایموجی پریمیوم با کد عددی
 def parse_emoji_ids(txt):
-    """کدهای عددی ایموجی را از متن درمی‌آورد؛ مثل 5920499378291744339 یا [5920499378291744339]"""
+    """کد عددی custom emoji را از متن درمی‌آورد؛ کد فارسی/لاتین و جداکننده‌ها را قبول می‌کند."""
     txt = (txt or "").translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789"))
-    return re.findall(r"[0-9]{15,20}", txt)
+    # custom_emoji_id تلگرام یک شناسه عددی است، نه file_id یا message_id.
+    return re.findall(r"(?<!\d)[0-9]{15,20}(?!\d)", txt)
 
 async def check_emoji(bot, eid):
-    """بررسی کد ایموجی از سرور تلگرام؛ خروجی: (معتبر؟, ایموجی جایگزین)"""
+    """اعتبارسنجی واقعی custom_emoji_id با Telegram Bot API.
+    خطای شبکه/دسترسی نباید به‌اشتباه کد را معتبر اعلام کند.
+    """
+    eid = str(eid or "").strip()
+    if not re.fullmatch(r"[0-9]{15,20}", eid):
+        return False, None
     try:
         st = await bot.get_custom_emoji_stickers([eid])
-        if st: return True, (st[0].emoji or "⭐️")
+        if st and getattr(st[0], "type", None) == "custom_emoji":
+            return True, (st[0].emoji or "⭐️")
         return False, None
     except Exception as e:
-        log.warning("check_emoji %s: %s", eid, e); return True, "⭐️"
+        log.warning("custom emoji validation failed for %s: %s", eid, e)
+        return False, None
 
 def strip_premium(text, markup):
     """اگر تلگرام ایموجی پریمیوم را قبول نکرد، نسخه ساده (بدون پریمیوم) ساخته می‌شود."""
@@ -2085,7 +2093,7 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if ids: eid, fb = ids[0], entity_fb(m, ids[0])
         elif parse_emoji_ids(txt):
             eid = parse_emoji_ids(txt)[0]; valid, fb = await check_emoji(ctx.bot, eid)
-            if not valid: return await m.reply_text("❌ این کد ایموجی معتبر نیست.")
+            if not valid: return await m.reply_text("❌ این کد custom emoji معتبر نیست یا تلگرام فعلاً آن را در دسترس ربات قرار نداده است.")
         else:
             return await m.reply_text("ایموجی پریمیوم پیدا نکردم. (فرستنده باید تلگرام پریمیوم داشته باشد تا ایموجی پریمیوم بفرستد)")
         ctx.user_data["eq"] = (eid, fb)
