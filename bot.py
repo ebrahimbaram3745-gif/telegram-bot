@@ -2432,5 +2432,789 @@ def main():
     log.info("bot started")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
+# ═══════════════════════════════════════════════════════════════════════════════════════
+# ➕➕ افزودنی‌های نسخه جدید
+# این بلوک فقط «اضافه» شده است. هیچ خطی از کد قبلی حذف یا ویرایش نشده؛
+# قابلیت‌های جدید با پوشاندن (wrap) توابع قبلی اضافه می‌شوند و در آخر همان تابع قبلی صدا زده می‌شود.
+# ═══════════════════════════════════════════════════════════════════════════════════════
+import contextvars
+
+# ---------- ایموجی‌های دکمه‌های جدید (در پنل ایموجی پریمیوم نمایش داده می‌شوند) ----------
+EMOJI.update({
+    "profile": "🪪", "pending": "🧾", "audit": "📜", "backup": "💾", "autobackup": "⏱", "report": "📈",
+    "paneltest": "🧪", "maintenance": "🚧", "forcejoin": "📌", "gateway": "🏦", "groups": "👥", "bc2": "📣",
+    "mytickets": "🗂", "zarinpal": "💠", "crypto": "💎", "verify": "🔍", "files": "📎", "addgb": "📶",
+    "adddays": "📅", "manualsvc": "🛠", "msg": "✉️", "history": "📚", "newticket": "🆕",
+})
+
+# ---------- گروه رنگ دکمه‌های جدید (در پنل رنگ دکمه‌ها نمایش داده می‌شوند) ----------
+for _k, _n in {"nup": "دکمه‌های پروفایل کاربر (ادمین)", "nsv": "لیست سرویس‌های کاربر (ادمین)",
+               "nrc": "لیست رسیدهای در انتظار (ادمین)", "ngp": "لیست گروه‌های کاربری (ادمین)",
+               "nmk": "دکمه‌های ساخت سرویس دستی (ادمین)", "nmt": "لیست تیکت‌های من",
+               "nbc": "دکمه‌های پیام همگانی پیشرفته (ادمین)", "nzp": "دکمه‌های پرداخت آنلاین",
+               "ncr": "دکمه‌های پرداخت ارز دیجیتال"}.items():
+    if _k not in BTN_GROUPS and _n not in BTN_NAMES:
+        BTN_GROUPS[_k] = _n; BTN_NAMES.append(_n)
+
+# ---------- تنظیمات جدید ----------
+DEFAULT_SETTINGS.update({
+    "mnt_on": "0", "fj_on": "0", "fj_chat": "", "fj_url": "",
+    "zp_on": "0", "zp_merchant": "", "zp_sandbox": "0", "zp_callback": "",
+    "cr_on": "0", "cr_wallet": "", "cr_network": "USDT (TRC20)", "cr_rate": "",
+    "abk_on": "0", "abk_hours": "24", "abk_last": "0", "groups": "",
+})
+SETTING_TITLES.update({
+    "fj_chat": "آیدی کانال عضویت اجباری (مثل @channel یا -100...)",
+    "fj_url": "لینک عضویت کانال (اختیاری)",
+    "zp_merchant": "مرچنت کد زرین‌پال", "zp_callback": "آدرس بازگشت درگاه (اختیاری)",
+    "cr_wallet": "آدرس کیف پول ارز دیجیتال", "cr_network": "شبکه/ارز (مثل USDT TRC20)",
+    "cr_rate": "قیمت هر واحد ارز به تومان", "abk_hours": "فاصله بکاپ خودکار (ساعت)",
+})
+
+# ---------- متن‌های جدید (از ویرایش متن‌ها قابل تغییرند) ----------
+TEXTS.update({
+    "maintenance": ("حالت تعمیرات", "🚧 <b>ربات در حال بروزرسانی است</b>\n\nلطفاً کمی بعد دوباره سر بزنید. {E:bot}"),
+    "force_join": ("عضویت اجباری",
+        "{E:forcejoin} <b>عضویت در کانال</b>\n\nبرای استفاده از ربات، اول در کانال ما عضو شوید و بعد دکمه «عضو شدم» را بزنید."),
+    "zp_pay": ("پرداخت آنلاین",
+        "{E:zarinpal} <b>پرداخت آنلاین</b>\n<blockquote>مبلغ: <b>{PRICE}</b> تومان</blockquote>\n\n"
+        "۱. روی «پرداخت آنلاین» بزنید و پرداخت را انجام دهید.\n۲. بعد از پرداخت، «بررسی پرداخت» را بزنید."),
+    "crypto_pay": ("پرداخت ارز دیجیتال",
+        "{E:crypto} <b>پرداخت با ارز دیجیتال</b>\n<blockquote>مبلغ: <b>{PRICE}</b> تومان\n"
+        "معادل: <b>{AMOUNT}</b>\nشبکه: <b>{NETWORK}</b>\nآدرس کیف پول:\n<code>{WALLET}</code></blockquote>\n\n"
+        "بعد از واریز، <b>اسکرین‌شات تراکنش</b> را بفرستید (TXID را در کپشن بنویسید)."),
+    "my_tickets": ("تیکت‌های من", "{E:mytickets} <b>تیکت‌های من</b>\nروی هر تیکت بزن تا تاریخچه‌اش را ببینی."),
+})
+
+NX_PREFIXES_ADMIN = {"nx", "nup", "nsv", "nrc", "ngp", "nmk", "nbc"}
+NX_PREFIXES_USER = {"nmt", "nzp", "nzv", "ncr"}
+NX_STATES_ADMIN = {"nxprof", "nxbal", "nxmsg", "nxsvadd", "ngpadd", "ngpset", "nxbc"}
+NX_STATES_USER = {"nxcrypto"}
+_NX_FJ_CACHE = {}
+_NX_EXTRA = contextvars.ContextVar("nx_extra_rows", default=None)
+
+
+def nx_init_db():
+    CON.executescript("""
+    CREATE TABLE IF NOT EXISTS support_files(id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER,
+        sender_id INTEGER, file_id TEXT, kind TEXT, caption TEXT, created INTEGER);
+    CREATE TABLE IF NOT EXISTS gw_payments(id INTEGER PRIMARY KEY AUTOINCREMENT, authority TEXT, user_id INTEGER,
+        amount INTEGER, bonus INTEGER DEFAULT 0, status TEXT DEFAULT 'pending', ref_id TEXT, created INTEGER);
+    """)
+    CON.commit()
+
+
+def nx_digits(t):
+    return (t or "").translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")).replace(",", "").strip()
+
+
+class _NxShim:
+    """برای صدا زدن دستورهای قبلی (/backup ، /report ، /paneltest) از روی دکمه."""
+    def __init__(self, update):
+        self.effective_user = update.effective_user
+        self.effective_chat = update.effective_chat
+        self.message = update.callback_query.message
+        self.callback_query = None
+
+
+# ---------- پوشاندن show: اضافه کردن ردیف دکمه جدید به صفحه‌های قبلی، قبل از دکمه بازگشت ----------
+_nx_orig_show = show
+async def show(update, text, kb=None):
+    extra = _NX_EXTRA.get()
+    if extra and kb is not None:
+        _NX_EXTRA.set(None)
+        kb = list(kb); pos = max(len(kb) - 1, 0); kb[pos:pos] = extra
+    return await _nx_orig_show(update, text, kb)
+
+
+def _nx_with_extra(fn, rows_fn):
+    async def wrapper(*a, **k):
+        try: rows = rows_fn(*a, **k)
+        except Exception as e: log.warning("nx extra rows: %s", e); rows = None
+        tok = _NX_EXTRA.set(rows or None)
+        try: return await fn(*a, **k)
+        finally: _NX_EXTRA.reset(tok)
+    wrapper.__name__ = getattr(fn, "__name__", "wrapper")
+    return wrapper
+
+
+def _nx_support_rows(update, ctx):
+    return [row(btn("تیکت‌های من", "nmt:list", BLUE, "mytickets"))]
+
+
+def _nx_receipt_rows(update, ctx, amount, gift):
+    g = 1 if gift else 0; rows = []
+    if S("zp_on") == "1" and S("zp_merchant"):
+        rows.append(row(btn("پرداخت آنلاین (زرین‌پال)", f"nzp:{amount}:{g}", GREEN, "zarinpal")))
+    if S("cr_on") == "1" and S("cr_wallet"):
+        rows.append(row(btn("پرداخت با ارز دیجیتال", f"ncr:{amount}:{g}", BLUE, "crypto")))
+    return rows
+
+
+added_support_menu = _nx_with_extra(added_support_menu, _nx_support_rows)
+ask_receipt = _nx_with_extra(ask_receipt, _nx_receipt_rows)
+
+
+# ---------- منوی ادمین: دکمه‌های جدید قبل از «بازگشت» ----------
+_nx_orig_admin_kb = admin_kb
+def admin_kb():
+    kb = _nx_orig_admin_kb()
+    extra = [
+        row(btn("پروفایل کاربر", "nx:prof", BLUE, "profile"), btn("رسیدهای در انتظار", "nx:pend", GREEN, "pending")),
+        row(btn("تیکت‌های پشتیبانی", "addtks", BLUE, "ticket"), btn("لاگ ادمین‌ها", "nx:audit", None, "audit")),
+        row(btn("بکاپ دیتابیس", "nx:bk", None, "backup"), btn("بکاپ خودکار", "nx:abk", None, "autobackup")),
+        row(btn("گزارش ۲۴ ساعته", "nx:rep", None, "report"), btn("تست اتصال پنل‌ها", "nx:ptest", None, "paneltest")),
+        row(btn("حالت تعمیرات", "nx:mnt", None, "maintenance"), btn("عضویت اجباری", "nx:fj", None, "forcejoin")),
+        row(btn("درگاه و ارز دیجیتال", "nx:gw", None, "gateway"), btn("گروه‌های کاربری", "nx:grp", None, "groups")),
+        row(btn("پیام همگانی پیشرفته", "nx:bc", BLUE, "bc2")),
+    ]
+    return kb[:-1] + extra + kb[-1:]
+
+
+# ---------- تخفیف گروه کاربری (روی قیمت بعد از کد تخفیف اعمال می‌شود) ----------
+def nx_groups():
+    return [g for g in (S("groups") or "").split("|") if g]
+
+def nx_group_pct(g):
+    try: return max(0, min(100, int(S("grp_pct:" + (g or "عادی")) or 0)))
+    except Exception: return 0
+
+_nx_orig_dc_price = dc_price
+def dc_price(uid, price):
+    final, line, code = _nx_orig_dc_price(uid, price)
+    try:
+        u = get_user(uid); g = (u["grp"] if u else None) or "عادی"; pct = nx_group_pct(g)
+        if pct and final > 0:
+            off = final * pct // 100; final = final - off
+            line += (f"\n\n<blockquote>{E('groups')} تخفیف گروه <b>{html.escape(g)}</b>: <b>{pct}%</b> ({money(off)} تومان)\n"
+                     f"{E('ok')} مبلغ نهایی: <b>{money(final)}</b> تومان</blockquote>")
+    except Exception as e:
+        log.warning("group price: %s", e)
+    return final, line, code
+
+
+# ---------- فایل/عکس در تیکت ----------
+def _nx_ticket_files(tid):
+    return q("SELECT * FROM support_files WHERE ticket_id=? ORDER BY id", (tid,))
+
+_nx_orig_ticket_kb = added_ticket_kb
+def added_ticket_kb(tid, admin=False):
+    kb = _nx_orig_ticket_kb(tid, admin)
+    try:
+        if _nx_ticket_files(tid):
+            rows = [list(r) for r in kb.inline_keyboard]
+            rows.insert(len(rows) - 1 if admin else len(rows), [btn("فایل‌های تیکت", f"nmt:f:{tid}", None, "files")])
+            return IKM(rows)
+    except Exception as e:
+        log.warning("ticket kb: %s", e)
+    return kb
+
+
+async def nx_ticket_file(update, ctx, uid, st):
+    m = update.effective_message; tid = int(st[1])
+    t = q("SELECT * FROM support_tickets WHERE id=? AND status='open'", (tid,), True)
+    if not t or (t["user_id"] != uid and not is_admin(uid)): clear_state(ctx); return await m.reply_text("تیکت پیدا نشد یا بسته است.")
+    if m.photo: fid, kind = m.photo[-1].file_id, "photo"
+    else: fid, kind = m.document.file_id, "document"
+    cap = (m.caption or "").strip(); now = int(time.time())
+    ex("INSERT INTO support_files(ticket_id,sender_id,file_id,kind,caption,created) VALUES(?,?,?,?,?,?)", (tid, uid, fid, kind, cap, now))
+    ex("INSERT INTO support_messages(ticket_id,sender_id,body,created) VALUES(?,?,?,?)",
+       (tid, uid, ("📷 [عکس] " if kind == "photo" else "📎 [فایل] ") + cap, now))
+    ex("UPDATE support_tickets SET updated=? WHERE id=?", (now, tid)); added_audit(uid, "ticket_file", tid, kind)
+    send = (lambda chat, **k: ctx.bot.send_photo(chat, fid, **k)) if kind == "photo" else (lambda chat, **k: ctx.bot.send_document(chat, fid, **k))
+    if is_admin(uid) and t["user_id"] != uid:
+        try: await send(t["user_id"], caption=f"📩 پاسخ پشتیبانی برای تیکت #{tid}\n{cap}"[:1000], reply_markup=added_ticket_kb(tid, False))
+        except Exception as e: log.warning("ticket file to user: %s", e)
+        await m.reply_text("✅ فایل برای کاربر ارسال شد.", reply_markup=added_ticket_kb(tid, True))
+    else:
+        for a in ADMIN_IDS:
+            try: await send(a, caption=f"🎫 فایل جدید در تیکت #{tid} از کاربر {uid}\n{cap}"[:1000], reply_markup=added_ticket_kb(tid, True))
+            except Exception: pass
+        await m.reply_text("✅ فایل ثبت شد. منتظر پاسخ پشتیبانی باش.")
+    clear_state(ctx)
+
+
+async def nx_my_tickets(update, uid):
+    rows = q("SELECT * FROM support_tickets WHERE user_id=? ORDER BY id DESC LIMIT 20", (uid,))
+    kb = [row(btn(f"{'🟢' if r['status'] == 'open' else '🔒'} #{r['id']} | {jdate(r['created'])}", f"nmt:v:{r['id']}")) for r in rows]
+    kb += [row(btn("باز کردن تیکت", "addtkopen", BLUE, "newticket")), row(btn("بازگشت", "supportmenu", RED, "back"))]
+    await show(update, render("my_tickets") + ("" if rows else "\n\nهنوز تیکتی نداری."), kb)
+
+
+async def nx_my_ticket_view(update, uid, tid):
+    t = q("SELECT * FROM support_tickets WHERE id=?", (tid,), True)
+    if not t or (t["user_id"] != uid and not is_admin(uid)): return await nx_my_tickets(update, uid)
+    text = added_ticket_text(tid) or "تیکت پیدا نشد."
+    if len(text) > 3900: text = text[:3900] + "\n…"
+    kb = [list(r) for r in added_ticket_kb(tid, False).inline_keyboard] if t["status"] == "open" else []
+    if t["status"] != "open" and _nx_ticket_files(tid): kb.append([btn("فایل‌های تیکت", f"nmt:f:{tid}", None, "files")])
+    kb += [row(btn("بازگشت", "nmt:list", RED, "back"))]
+    await show(update, text, kb)
+
+
+# ---------- عضویت اجباری و حالت تعمیرات ----------
+def nx_maint_block(uid):
+    return S("mnt_on") == "1" and not is_admin(uid)
+
+def _nx_plain(t):
+    return re.sub(r"<[^>]+>", "", t or "")[:190]
+
+async def nx_fj_ok(bot, uid):
+    chat = (S("fj_chat") or "").strip()
+    if S("fj_on") != "1" or not chat or is_admin(uid): return True
+    if time.time() - _NX_FJ_CACHE.get(uid, 0) < 60: return True
+    try:
+        mem = await bot.get_chat_member(chat, uid)
+        ok = mem.status in ("member", "administrator", "creator", "owner") or (mem.status == "restricted" and getattr(mem, "is_member", False))
+    except Exception as e:
+        log.warning("force join check (ربات باید ادمین کانال باشد): %s", e); return True
+    if ok: _NX_FJ_CACHE[uid] = time.time()
+    return ok
+
+def nx_fj_kb():
+    chat = (S("fj_chat") or "").strip()
+    link = S("fj_url") or (f"https://t.me/{chat[1:]}" if chat.startswith("@") else S("channel_url"))
+    return [row(btn("عضویت در کانال", url=link, ek="channel")), row(btn("عضو شدم", "nfj:check", GREEN, "ok"))]
+
+
+_nx_orig_cmd_start = cmd_start
+async def cmd_start(update, ctx):
+    uid = update.effective_user.id
+    ref = None
+    if ctx.args and ctx.args[0].startswith("ref_") and ctx.args[0][4:].isdigit(): ref = int(ctx.args[0][4:])
+    u = touch(update.effective_user, ref)  # ثبت معرف حتی اگر کاربر هنوز عضو کانال نشده باشد
+    if u["banned"]: return await _nx_orig_cmd_start(update, ctx)
+    if nx_maint_block(uid):
+        return await update.message.reply_text(render("maintenance"), parse_mode=ParseMode.HTML)
+    if not await nx_fj_ok(ctx.bot, uid):
+        clear_state(ctx)
+        return await update.message.reply_text(render("force_join"), parse_mode=ParseMode.HTML, reply_markup=IKM(nx_fj_kb()))
+    return await _nx_orig_cmd_start(update, ctx)
+
+
+# ---------- پروفایل کاربر (ادمین) ----------
+async def nx_profile(update, tid):
+    u = get_user(tid)
+    if not u: return await show(update, "کاربر پیدا نشد.", admin_back())
+    now = int(time.time())
+    act = q("SELECT COUNT(*) c FROM services WHERE user_id=? AND status='active' AND expire>?", (tid, now), True)["c"]
+    tot = q("SELECT COUNT(*) c FROM services WHERE user_id=? AND status!='deleted'", (tid,), True)["c"]
+    paid = q("SELECT COALESCE(SUM(amount),0) s FROM payments WHERE user_id=? AND status='ok'", (tid,), True)["s"]
+    spent = q("SELECT COALESCE(SUM(amount),0) s FROM txlog WHERE user_id=?", (tid,), True)["s"]
+    refs = q("SELECT COUNT(*) c FROM users WHERE ref_by=?", (tid,), True)["c"]
+    pend = q("SELECT COUNT(*) c FROM payments WHERE user_id=? AND status='pending'", (tid,), True)["c"]
+    tks = q("SELECT COUNT(*) c FROM support_tickets WHERE user_id=?", (tid,), True)["c"]
+    g = u["grp"] or "عادی"
+    t = (f"{E('profile')} <b>پروفایل کاربر</b>\n<blockquote>🆔 آیدی: <code>{tid}</code>\n"
+         f"👤 نام: <b>{html.escape(u['name'] or '-')}</b>\n🔗 یوزرنیم: {('@' + html.escape(u['username'])) if u['username'] else '-'}\n"
+         f"{E('phone')} شماره: {html.escape(u['phone'] or 'ثبت نشده')}\n👥 گروه: <b>{html.escape(g)}</b> ({nx_group_pct(g)}% تخفیف)\n"
+         f"🚦 وضعیت: <b>{'🚫 مسدود' if u['banned'] else '✅ فعال'}</b>\n🕒 عضویت: {jdate(u['created'])}\n"
+         f"👀 آخرین بازدید: {jdate(u['last_seen'])}</blockquote>\n"
+         f"<blockquote>{E('wallet')} موجودی: <b>{money(u['balance'])}</b> تومان\n"
+         f"{E('plan')} سرویس فعال: <b>{act}</b> از <b>{tot}</b>\n💳 شارژ تأییدشده: <b>{money(paid)}</b> تومان\n"
+         f"🛒 خرید/تمدید: <b>{money(spent)}</b> تومان\n🧾 رسید در انتظار: <b>{pend}</b>\n"
+         f"{E('ref')} زیرمجموعه: <b>{refs}</b> | معرف: <code>{u['ref_by'] or '-'}</code>\n🎫 تیکت‌ها: <b>{tks}</b></blockquote>")
+    kb = [row(btn("افزایش موجودی کاربر", f"nup:add:{tid}", GREEN, "addbal"), btn("کسر موجودی کاربر", f"nup:sub:{tid}", RED, "subbal")),
+          row(btn("آن‌بن کاربر", f"nup:ban:{tid}", GREEN, "unban") if u["banned"] else btn("بن کاربر", f"nup:ban:{tid}", RED, "ban")),
+          row(btn("سرویس‌های کاربر", f"nup:svc:{tid}", BLUE, "subs"), btn("ساخت سرویس دستی", f"nup:mk:{tid}", GREEN, "manualsvc")),
+          row(btn("تراکنش‌های کاربر", f"nup:trx:{tid}", None, "trx"), btn("تغییر گروه کاربر", f"nup:grp:{tid}", None, "groups")),
+          row(btn("ارسال پیام به کاربر", f"nup:msg:{tid}", None, "msg"), btn("تیکت‌های کاربر", f"nup:tk:{tid}", None, "ticket")),
+          row(btn("بروزرسانی پروفایل", f"nup:v:{tid}", None, "search"))] + admin_back()
+    await show(update, t, kb)
+
+
+async def nx_user_services(update, tid):
+    rows = q("SELECT * FROM services WHERE user_id=? AND status!='deleted' ORDER BY id DESC LIMIT 30", (tid,))
+    now = time.time()
+    kb = [row(btn(f"{'🟢' if s['status'] == 'active' and s['expire'] > now else ('⏳' if s['status'] == 'pending' else '🔴')} "
+                  f"{(s['title'] if 'title' in s.keys() and s['title'] else s['username'])} | {s['gb']}GB", f"nsv:v:{s['id']}")) for s in rows]
+    kb += [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))]
+    await show(update, f"{E('subs')} <b>سرویس‌های کاربر</b> <code>{tid}</code>" + ("" if rows else "\n\nسرویسی ندارد."), kb)
+
+
+async def nx_service_view(update, sid):
+    s = q("SELECT * FROM services WHERE id=?", (sid,), True)
+    if not s: return await show(update, "سرویس پیدا نشد.", admin_back())
+    pn = q("SELECT * FROM panels WHERE id=?", (s["panel_id"],), True)
+    t = (f"{E('plan')} <b>{svc_name(s)}</b>\n<blockquote>👤 کاربر: <code>{s['user_id']}</code>\n"
+         f"📍 پنل: {html.escape(pn['name'] if pn else '-')}\n{E('volume')} حجم: {s['gb']} گیگ\n"
+         f"{E('time')} انقضا: {jdate(s['expire'])}\n🚦 وضعیت: {s['status']}{' (تست)' if s['is_test'] else ''}\n"
+         f"{E('price')} مبلغ: {money(s['price'] or 0)} تومان</blockquote>\n"
+         f"{E('link')} <code>{html.escape((s['sub'] or s['link'] or '-')[:900])}</code>")
+    kb = [row(btn("افزایش حجم", f"nsv:gb:{sid}", GREEN, "addgb"), btn("افزایش روز", f"nsv:dy:{sid}", GREEN, "adddays")),
+          row(btn("بازگشت به سرویس‌ها", f"nup:svc:{s['user_id']}", RED, "back"))]
+    await show(update, t, kb)
+
+
+async def panel_edit(p, username, gb, exp):
+    """ویرایش حجم/انقضا روی پنل بدون ریست مصرف (برخلاف تمدید)."""
+    t = p["ptype"]; limit = int(float(gb) * 1024 ** 3); exp = int(exp)
+    async with _http(p) as c:
+        if t in ("marzban", "pasarguard"):
+            h = await _token(c, p)
+            body = {"expire": exp, "data_limit": limit, "status": "active"}
+            r = await c.put(f"/api/user/{username}", json=body, headers=h)
+            if t == "pasarguard" and r.status_code == 422:
+                body["expire"] = dt.datetime.fromtimestamp(exp, dt.timezone.utc).isoformat()
+                r = await c.put(f"/api/user/{username}", json=body, headers=h)
+            if r.status_code >= 400: raise Exception(f"HTTP {r.status_code}: {r.text[:300]}")
+        elif t == "marzneshin":
+            h = await _token(c, p)
+            body = {"username": username, "expire_strategy": "fixed_date", "data_limit": limit,
+                    "expire_date": dt.datetime.fromtimestamp(exp, dt.timezone.utc).isoformat()}
+            r = await c.put(f"/api/users/{username}", json=body, headers=h)
+            if r.status_code >= 400: raise Exception(f"HTTP {r.status_code}: {r.text[:300]}")
+        elif t in XUI_PREFIX:
+            await _xlogin(c, p)
+            inb, inbound, client = await _xui_find(c, t, p, username)
+            if not client: raise Exception("کلاینت روی پنل پیدا نشد")
+            client.update({"totalGB": limit, "expiryTime": exp * 1000, "enable": True})
+            r = await c.post(f"{XUI_PREFIX[t]}/updateClient/{_xui_cid(inbound, client)}",
+                             data={"id": inb, "settings": json.dumps({"clients": [client]})})
+            j = r.json()
+            if not j.get("success"): raise Exception(j.get("msg") or "updateClient failed")
+        else:
+            raise Exception("نوع پنل پشتیبانی نمی‌شود")
+
+
+async def nx_service_add(update, ctx, uid, sid, kind, val):
+    s = q("SELECT * FROM services WHERE id=?", (sid,), True)
+    if not s: return await update.effective_message.reply_text("سرویس پیدا نشد.")
+    pn = q("SELECT * FROM panels WHERE id=?", (s["panel_id"],), True)
+    gb = float(s["gb"] or 0) + (val if kind == "gb" else 0)
+    exp = int(max(time.time(), s["expire"] or 0) + val * 86400) if kind == "dy" else int(s["expire"] or time.time())
+    gb_db = int(gb) if float(gb).is_integer() else gb
+    try:
+        if pn and pn["ptype"] != "manual" and s["status"] != "pending":
+            await panel_edit(pn, s["username"], gb, exp)
+    except Exception as e:
+        log.exception("panel edit")
+        return await update.effective_message.reply_text(f"❌ خطای پنل: {html.escape(str(e))[:400]}", parse_mode=ParseMode.HTML,
+                                                         reply_markup=IKM([row(btn("بازگشت به سرویس", f"nsv:v:{sid}", RED, "back"))]))
+    ex("UPDATE services SET gb=?, expire=?, status=CASE WHEN status='expired' THEN 'active' ELSE status END, mid_sent=0 WHERE id=?",
+       (gb_db, exp, sid))
+    added_audit(uid, "service_add_" + kind, sid, val)
+    try: await ctx.bot.send_message(s["user_id"], f"🎁 به سرویس <code>{html.escape(s['username'])}</code> "
+                                    f"{('%s گیگ حجم' % val) if kind == 'gb' else ('%s روز' % val)} اضافه شد.", parse_mode=ParseMode.HTML)
+    except Exception: pass
+    await update.effective_message.reply_text("✅ انجام شد.", reply_markup=IKM([row(btn("بازگشت به سرویس", f"nsv:v:{sid}", BLUE, "back"))]))
+
+
+async def nx_user_trx(update, tid):
+    lines = [f"{E('trx')} <b>تراکنش‌های کاربر</b> <code>{tid}</code>"]
+    tx = q("SELECT * FROM txlog WHERE user_id=? ORDER BY id DESC LIMIT 15", (tid,))
+    if tx:
+        lines.append("\n🛒 <b>خرید/تمدید</b><blockquote>" + "\n".join(
+            f"{jdate(r['created'])} | {r['kind']} | {money(r['amount'])} تومان" + (f" | کد {html.escape(r['code'])}" if r['code'] else "")
+            for r in tx) + "</blockquote>")
+    pays = q("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 15", (tid,))
+    if pays:
+        st = {"ok": "✅", "pending": "⏳", "rejected": "❌"}
+        lines.append("\n💳 <b>شارژها</b><blockquote>" + "\n".join(
+            f"{st.get(r['status'], r['status'])} #{r['id']} | {jdate(r['created'])} | {money(r['amount'])}" + (f" + {money(r['bonus'])}" if r['bonus'] else "")
+            for r in pays) + "</blockquote>")
+    if len(lines) == 1: lines.append("\nتراکنشی ثبت نشده.")
+    await show(update, "\n".join(lines)[:4000], [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+
+
+# ---------- گروه‌های کاربری ----------
+async def nx_groups_page(update):
+    gs = ["عادی"] + nx_groups()
+    kb = [row(btn(f"{g} | {nx_group_pct(g)}% | {q('SELECT COUNT(*) c FROM users WHERE grp=?', (g,), True)['c']} نفر", f"ngp:e:{i - 1}"))
+          for i, g in enumerate(gs)]
+    kb += [row(btn("افزودن گروه", "ngp:add", GREEN, "addbal"))] + admin_back()
+    await show(update, f"{E('groups')} <b>گروه‌های کاربری</b>\nهر گروه درصد تخفیف خودش را روی خرید و تمدید دارد.\n"
+                       "گروه هر کاربر از «پروفایل کاربر» تغییر می‌کند.", kb)
+
+def _nx_group_by_idx(i):
+    i = int(i)
+    if i < 0: return "عادی"
+    gs = nx_groups(); return gs[i] if i < len(gs) else None
+
+
+# ---------- پرداخت آنلاین زرین‌پال ----------
+def _nx_zp_base():
+    return "https://sandbox.zarinpal.com" if S("zp_sandbox") == "1" else "https://payment.zarinpal.com"
+
+async def nx_zp_request(amount_toman, uid, callback):
+    body = {"merchant_id": S("zp_merchant"), "amount": int(amount_toman) * 10, "callback_url": callback,
+            "description": f"شارژ کیف پول {uid}"}
+    async with httpx.AsyncClient(timeout=20) as c:
+        r = await c.post(_nx_zp_base() + "/pg/v4/payment/request.json", json=body)
+    j = r.json(); d = j.get("data") or {}
+    if isinstance(d, dict) and d.get("code") == 100 and d.get("authority"):
+        return d["authority"], f"{_nx_zp_base()}/pg/StartPay/{d['authority']}"
+    raise Exception(str(j.get("errors") or j)[:300])
+
+async def nx_zp_verify(amount_toman, authority):
+    body = {"merchant_id": S("zp_merchant"), "amount": int(amount_toman) * 10, "authority": authority}
+    async with httpx.AsyncClient(timeout=20) as c:
+        r = await c.post(_nx_zp_base() + "/pg/v4/payment/verify.json", json=body)
+    j = r.json(); d = j.get("data") or {}
+    if isinstance(d, dict) and d.get("code") in (100, 101): return True, str(d.get("ref_id") or "")
+    return False, str(j.get("errors") or d)[:300]
+
+async def nx_ref_share(ctx, payer_id, amount):
+    payer = get_user(payer_id)
+    if not payer or not payer["ref_by"]: return
+    try: share = int(amount) * int(S("ref_percent") or 0) // 100
+    except Exception: share = 0
+    if share:
+        ex("UPDATE users SET balance=balance+? WHERE id=?", (share, payer["ref_by"]))
+        try: await ctx.bot.send_message(payer["ref_by"], f"🤝 {money(share)} تومان پاداش زیرمجموعه گرفتی!")
+        except Exception: pass
+
+
+# ---------- پیام همگانی پیشرفته ----------
+async def nx_broadcast(update, ctx, uid, mode, target):
+    m = update.effective_message; now = int(time.time())
+    if target == "act":
+        ids = [r["user_id"] for r in q("SELECT DISTINCT user_id FROM services WHERE status='active' AND expire>?", (now,))]
+        banned = {r["id"] for r in q("SELECT id FROM users WHERE banned=1")}; ids = [i for i in ids if i not in banned]
+    else:
+        ids = [r["id"] for r in q("SELECT id FROM users WHERE banned=0")]
+    prog = await m.reply_text(f"⏳ در حال ارسال برای {len(ids)} نفر...")
+    ok = blocked = fail = 0
+    for n, cid in enumerate(ids, 1):
+        try:
+            if mode == "fwd": await m.forward(cid)
+            else: await m.copy(cid)
+            ok += 1
+        except Exception as e:
+            s = (type(e).__name__ + " " + str(e)).lower()
+            if "forbidden" in s or "blocked" in s or "deactivated" in s: blocked += 1
+            else: fail += 1
+        if n % 50 == 0:
+            try: await prog.edit_text(f"⏳ {n} از {len(ids)} | موفق {ok} | بلاک {blocked} | خطا {fail}")
+            except Exception: pass
+        await asyncio.sleep(0.04)
+    added_audit(uid, "broadcast_" + mode, target, f"ok={ok} blocked={blocked} fail={fail}")
+    return await m.reply_text(f"📣 <b>گزارش پیام همگانی</b>\n<blockquote>کل: {len(ids)}\n✅ موفق: {ok}\n"
+                              f"🚫 ربات را بلاک کرده‌اند: {blocked}\n⚠️ خطا: {fail}</blockquote>",
+                              parse_mode=ParseMode.HTML, reply_markup=IKM(admin_kb()))
+
+
+# ---------- بکاپ خودکار (داخل همان کار زمان‌بندی‌شده قبلی) ----------
+async def nx_auto_backup(ctx):
+    if S("abk_on") != "1": return
+    try: hours = max(1, int(nx_digits(S("abk_hours")) or 24))
+    except Exception: hours = 24
+    now = int(time.time())
+    try: last = int(S("abk_last") or 0)
+    except Exception: last = 0
+    if now - last < hours * 3600: return
+    set_S("abk_last", now)
+    try:
+        stamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S'); path = f"{DB_PATH}.auto_{stamp}"
+        CON.commit(); shutil.copy2(DB_PATH, path); added_audit(0, "auto_backup", path)
+        for a in {MAIN_ADMIN_ID} | set(ENV_ADMIN_IDS):
+            try:
+                with open(path, "rb") as f:
+                    await ctx.bot.send_document(a, f, filename=os.path.basename(path), caption="💾 بکاپ خودکار دیتابیس")
+            except Exception as e: log.warning("auto backup send %s: %s", a, e)
+    except Exception as e:
+        log.warning("auto backup: %s", e)
+
+_nx_orig_job_followup = job_followup
+async def job_followup(ctx):
+    try: await _nx_orig_job_followup(ctx)
+    finally: await nx_auto_backup(ctx)
+
+
+# ---------- مسیریابی دکمه‌های جدید ----------
+async def nx_callback(update, ctx, uid, d):
+    cq = update.callback_query; p = d.split(":")
+    # ---- کاربر ----
+    if p[0] == "nmt":
+        if p[1] == "list": return await nx_my_tickets(update, uid)
+        if p[1] == "v": return await nx_my_ticket_view(update, uid, int(p[2]))
+        if p[1] == "f":
+            tid = int(p[2]); t = q("SELECT * FROM support_tickets WHERE id=?", (tid,), True)
+            if not t or (t["user_id"] != uid and not is_admin(uid)): return
+            for f in _nx_ticket_files(tid)[:20]:
+                cap = f"#{tid} | {'کاربر' if f['sender_id'] == t['user_id'] else 'پشتیبانی'} | {f['caption'] or ''}"[:1000]
+                try:
+                    if f["kind"] == "photo": await ctx.bot.send_photo(uid, f["file_id"], caption=cap)
+                    else: await ctx.bot.send_document(uid, f["file_id"], caption=cap)
+                except Exception as e: log.warning("ticket file: %s", e)
+            return
+    if p[0] == "nzp":
+        if S("zp_on") != "1" or not S("zp_merchant"): return await show(update, "درگاه فعلاً غیرفعال است.", back_home())
+        amount, gift = int(p[1]), p[2] == "1"
+        bonus = amount * int(S("gift_percent")) // 100 if gift and amount >= int(S("gift_min")) else 0
+        cb = S("zp_callback") or f"https://t.me/{getattr(ctx.bot, 'username', '') or BOT_REF.get('username') or ''}"
+        try: auth, link = await nx_zp_request(amount, uid, cb)
+        except Exception as e:
+            log.warning("zarinpal request: %s", e)
+            return await show(update, "❌ اتصال به درگاه ممکن نشد. از کارت به کارت استفاده کنید یا بعداً امتحان کنید.", back_home())
+        gid = ex("INSERT INTO gw_payments(authority,user_id,amount,bonus,created) VALUES(?,?,?,?,?)", (auth, uid, amount, bonus, int(time.time())))
+        clear_state(ctx)
+        return await show(update, render("zp_pay", PRICE=money(amount)),
+                          [row(btn("پرداخت آنلاین", url=link, ek="zarinpal")),
+                           row(btn("بررسی پرداخت", f"nzv:{gid}", GREEN, "verify")), row(btn("انصراف", "account", RED, "no"))])
+    if p[0] == "nzv":
+        g = q("SELECT * FROM gw_payments WHERE id=? AND user_id=?", (int(p[1]), uid), True)
+        if not g: return
+        if g["status"] != "pending": return await cq.answer("این پرداخت قبلاً بررسی شده.", show_alert=True)
+        ok, info = await nx_zp_verify(g["amount"], g["authority"])
+        if not ok: return await cq.answer("پرداخت هنوز تأیید نشده. اگر پرداخت کردی چند لحظه بعد دوباره بزن.", show_alert=True)
+        cur = CON.execute("UPDATE gw_payments SET status='ok', ref_id=? WHERE id=? AND status='pending'", (info, g["id"])); CON.commit()
+        if cur.rowcount != 1: return
+        total = g["amount"] + g["bonus"]
+        ex("UPDATE users SET balance=balance+? WHERE id=?", (total, uid))
+        pid = ex("INSERT INTO payments(user_id,amount,bonus,photo,status,created) VALUES(?,?,?,?,?,?)",
+                 (uid, g["amount"], g["bonus"], f"zarinpal:{info}", "ok", int(time.time())))
+        await nx_ref_share(ctx, uid, g["amount"]); added_audit(uid, "zarinpal_ok", pid, info)
+        for a in ADMIN_IDS:
+            try: await ctx.bot.send_message(a, f"💠 پرداخت آنلاین #{pid}\nکاربر: {uid}\nمبلغ: {money(g['amount'])} تومان\nکد پیگیری: {info}")
+            except Exception: pass
+        return await show(update, f"✅ پرداخت تأیید شد و {money(total)} تومان به کیف پولت اضافه شد.\nکد پیگیری: <code>{html.escape(info)}</code>", back_home())
+    if p[0] == "ncr":
+        if S("cr_on") != "1" or not S("cr_wallet"): return await show(update, "پرداخت ارز دیجیتال فعلاً غیرفعال است.", back_home())
+        amount, gift = int(p[1]), p[2] == "1"
+        try: rate = float(nx_digits(S("cr_rate")) or 0)
+        except Exception: rate = 0
+        amt = f"{amount / rate:.2f} {html.escape(S('cr_network').split()[0])}" if rate > 0 else "از پشتیبانی بپرسید"
+        set_state(ctx, "nxcrypto", amount, gift)
+        return await show(update, render("crypto_pay", PRICE=money(amount), AMOUNT=amt, NETWORK=html.escape(S("cr_network")),
+                                         WALLET=html.escape(S("cr_wallet"))), [row(btn("انصراف", "account", RED, "no"))])
+    if not is_admin(uid): return
+    # ---- ادمین ----
+    if d == "nx:prof":
+        set_state(ctx, "nxprof"); return await show(update, "آیدی عددی یا یوزرنیم کاربر را بفرست:", admin_back())
+    if d == "nx:pend":
+        rows = q("SELECT * FROM payments WHERE status='pending' ORDER BY id DESC LIMIT 40")
+        kb = [row(btn(f"#{r['id']} | {r['user_id']} | {money(r['amount'])}", f"nrc:{r['id']}")) for r in rows]
+        return await show(update, f"{E('pending')} <b>رسیدهای در انتظار</b> ({len(rows)})\nروی هر رسید بزن تا عکس و دکمه تأیید/رد بیاید."
+                          if rows else "✅ رسید در انتظاری نداریم.", kb + admin_back())
+    if p[0] == "nrc":
+        r = q("SELECT * FROM payments WHERE id=?", (int(p[1]),), True)
+        if not r or r["status"] != "pending": return await cq.answer("قبلاً بررسی شده.", show_alert=True)
+        u = get_user(r["user_id"])
+        cap = (f"🧾 رسید #{r['id']}\nکاربر: <code>{r['user_id']}</code> ({html.escape((u['name'] if u else '') or '')})\n"
+               f"مبلغ: {money(r['amount'])}{(' + هدیه ' + money(r['bonus'])) if r['bonus'] else ''} تومان\n🕒 {jdate(r['created'])}")
+        kb = IKM([row(btn("تأیید", f"pa:{r['id']}", GREEN, "ok"), btn("رد", f"pr:{r['id']}", RED, "no"))])
+        try: return await ctx.bot.send_photo(uid, r["photo"], caption=cap, parse_mode=ParseMode.HTML, reply_markup=kb)
+        except Exception as e: return await cq.message.reply_text(f"عکس رسید باز نشد: {e}")
+    if d == "nx:audit":
+        rows = q("SELECT * FROM audit_log ORDER BY id DESC LIMIT 30")
+        t = "\n".join(f"{jdate(r['created'])} | <code>{r['actor_id']}</code> | {html.escape(r['action'])} {html.escape(str(r['target'] or ''))[:30]}" for r in rows)
+        return await show(update, f"{E('audit')} <b>لاگ ادمین‌ها (۳۰ مورد آخر)</b>\n<blockquote>{t or 'خالی'}</blockquote>"[:4000], admin_back())
+    if d == "nx:bk": return await added_backup(_NxShim(update), ctx)
+    if d == "nx:rep": return await added_report(_NxShim(update), ctx)
+    if d == "nx:ptest":
+        await cq.message.reply_text("⏳ در حال تست اتصال پنل‌ها..."); return await added_panel_integration_test(_NxShim(update), ctx)
+    if d == "nx:abk":
+        return await show(update, f"{E('autobackup')} <b>بکاپ خودکار</b>\nفایل دیتابیس هر چند ساعت یک‌بار برای ادمین اصلی فرستاده می‌شود.\n"
+                                  f"آخرین بکاپ: {jdate(int(S('abk_last') or 0)) if S('abk_last') not in ('', '0') else '-'}",
+                          settings_kb(["abk_hours"], [("abk_on", "بکاپ خودکار")]))
+    if d == "nx:mnt":
+        return await show(update, f"{E('maintenance')} <b>حالت تعمیرات</b>\nوقتی روشن باشد، فقط ادمین‌ها از ربات استفاده می‌کنند.",
+                          [row(btn("ویرایش متن تعمیرات", "tx:maintenance", None, "text"))] + settings_kb([], [("mnt_on", "حالت تعمیرات")]))
+    if d == "nx:fj":
+        return await show(update, f"{E('forcejoin')} <b>عضویت اجباری</b>\nربات باید ادمین کانال باشد تا عضویت را چک کند.",
+                          [row(btn("ویرایش متن عضویت اجباری", "tx:force_join", None, "text"))] +
+                          settings_kb(["fj_chat", "fj_url"], [("fj_on", "عضویت اجباری")]))
+    if d == "nx:gw":
+        return await show(update, f"{E('gateway')} <b>درگاه پرداخت و ارز دیجیتال</b>\nگزینه‌های فعال در صفحه پرداخت کاربر کنار کارت به کارت نمایش داده می‌شوند.",
+                          settings_kb(["zp_merchant", "zp_callback", "cr_wallet", "cr_network", "cr_rate"],
+                                      [("zp_on", "درگاه زرین‌پال"), ("zp_sandbox", "حالت تست زرین‌پال"), ("cr_on", "پرداخت ارز دیجیتال")]))
+    if d == "nx:grp": clear_state(ctx); return await nx_groups_page(update)
+    if d == "nx:bc":
+        return await show(update, f"{E('bc2')} <b>پیام همگانی پیشرفته</b>\nنوع ارسال و گیرنده‌ها را انتخاب کن:",
+                          [row(btn("کپی برای همه", "nbc:copy:all", BLUE, "bc"), btn("فوروارد برای همه", "nbc:fwd:all", BLUE, "bc")),
+                           row(btn("کپی برای دارندگان سرویس فعال", "nbc:copy:act", GREEN, "subs")),
+                           row(btn("فوروارد برای دارندگان سرویس فعال", "nbc:fwd:act", GREEN, "subs"))] + admin_back())
+    if p[0] == "nbc":
+        set_state(ctx, "nxbc", p[1], p[2])
+        return await show(update, "پیامت را بفرست (متن، عکس، ویدیو یا هر چیزی). بعد از ارسال، گزارش کامل می‌گیری.", admin_back("nx:bc"))
+    if p[0] == "ngp":
+        if p[1] == "add":
+            set_state(ctx, "ngpadd"); return await show(update, "نام گروه و درصد تخفیف را بفرست:\n<code>VIP 10</code>", admin_back("nx:grp"))
+        if p[1] == "e":
+            g = _nx_group_by_idx(p[2])
+            if not g: return await nx_groups_page(update)
+            kb = [row(btn("تغییر درصد تخفیف", f"ngp:p:{p[2]}", BLUE, "price"))]
+            if g != "عادی": kb.append(row(btn("حذف گروه", f"ngp:d:{p[2]}", RED, "no")))
+            return await show(update, f"{E('groups')} گروه <b>{html.escape(g)}</b>\nتخفیف: <b>{nx_group_pct(g)}%</b>", kb + admin_back("nx:grp"))
+        if p[1] == "p":
+            set_state(ctx, "ngpset", p[2]); return await show(update, "درصد تخفیف جدید را بفرست (۰ تا ۱۰۰):", admin_back("nx:grp"))
+        if p[1] == "d":
+            g = _nx_group_by_idx(p[2])
+            if g and g != "عادی":
+                set_S("groups", "|".join(x for x in nx_groups() if x != g))
+                ex("UPDATE users SET grp='عادی' WHERE grp=?", (g,)); added_audit(uid, "group_delete", g)
+            return await nx_groups_page(update)
+        if p[1] == "s":
+            tid, g = int(p[2]), _nx_group_by_idx(p[3])
+            if g: ex("UPDATE users SET grp=? WHERE id=?", (g, tid)); added_audit(uid, "user_group", tid, g)
+            return await nx_profile(update, tid)
+    if p[0] == "nup":
+        act, tid = p[1], int(p[2])
+        if not get_user(tid): return await show(update, "کاربر پیدا نشد.", admin_back())
+        if act == "v": clear_state(ctx); return await nx_profile(update, tid)
+        if act in ("add", "sub"):
+            set_state(ctx, "nxbal", act, tid)
+            return await show(update, f"مبلغ {'افزایش' if act == 'add' else 'کسر'} برای <code>{tid}</code> را بفرست (تومان):", [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+        if act == "ban":
+            nb = 0 if get_user(tid)["banned"] else 1
+            ex("UPDATE users SET banned=? WHERE id=?", (nb, tid)); added_audit(uid, "ban" if nb else "unban", tid)
+            return await nx_profile(update, tid)
+        if act == "svc": return await nx_user_services(update, tid)
+        if act == "trx": return await nx_user_trx(update, tid)
+        if act == "grp":
+            gs = ["عادی"] + nx_groups()
+            kb = [row(btn(f"{g} ({nx_group_pct(g)}%)", f"ngp:s:{tid}:{i - 1}", BLUE)) for i, g in enumerate(gs)]
+            return await show(update, f"گروه جدید کاربر <code>{tid}</code> را انتخاب کن:", kb + [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+        if act == "msg":
+            set_state(ctx, "nxmsg", tid)
+            return await show(update, f"پیام برای کاربر <code>{tid}</code> را بفرست (متن/عکس/هرچی):", [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+        if act == "tk":
+            rows = q("SELECT * FROM support_tickets WHERE user_id=? ORDER BY id DESC LIMIT 20", (tid,))
+            kb = [row(btn(f"{'🟢' if r['status'] == 'open' else '🔒'} #{r['id']} | {jdate(r['created'])}", f"addtk:{r['id']}")) for r in rows]
+            return await show(update, f"🎫 تیکت‌های کاربر <code>{tid}</code>" + ("" if rows else "\n\nتیکتی ندارد."), kb + [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+        if act == "mk":
+            pans = q("SELECT * FROM panels WHERE active=1")
+            kb = [row(btn(f"{x['name']} ({x['ptype']})", f"nmk:p:{tid}:{x['id']}", BLUE)) for x in pans]
+            return await show(update, "پنل/لوکیشن سرویس رایگان را انتخاب کن:" if pans else "هیچ پنل فعالی نداریم.", kb + [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+    if p[0] == "nmk":
+        tid, pid = int(p[2]), int(p[3])
+        if p[1] == "p":
+            pls = q("SELECT * FROM plans WHERE active=1 ORDER BY months, gb")
+            kb = [row(btn(f"{x['months']}ماهه | {x['gb']}گیگ | {x['days']}روز", f"nmk:s:{tid}:{pid}:{x['id']}", GREEN)) for x in pls]
+            return await show(update, "پلن سرویس را انتخاب کن (برای کاربر رایگان ساخته می‌شود و از موجودی کم نمی‌شود):", kb + [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+        if p[1] == "s":
+            pn = q("SELECT * FROM panels WHERE id=?", (pid,), True); pl = q("SELECT * FROM plans WHERE id=?", (int(p[4]),), True)
+            if not pn or not pl: return await show(update, "پنل یا پلن پیدا نشد.", admin_back())
+            try: sid, manual = await build_service(ctx, tid, pn, pl["gb"], pl["days"], 0, pl["id"])
+            except Exception as e:
+                log.exception("admin manual service")
+                return await show(update, f"❌ ساخت سرویس خطا داد: {html.escape(str(e))[:400]}", [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", RED, "back"))])
+            trx_log(tid, "admin", sid, pl["id"], pn["id"], pl["gb"], pl["days"], 0); added_audit(uid, "admin_service", tid, sid)
+            if not manual:
+                try: await deliver(ctx, tid, sid)
+                except Exception as e: log.warning("deliver admin svc: %s", e)
+            return await show(update, "✅ سرویس ساخته شد" + (" (دستی: لینک را از پیام سفارش بفرست)." if manual else " و برای کاربر ارسال شد."),
+                              [row(btn("بازگشت به پروفایل", f"nup:v:{tid}", BLUE, "back"))])
+    if p[0] == "nsv":
+        sid = int(p[2])
+        if p[1] == "v": clear_state(ctx); return await nx_service_view(update, sid)
+        if p[1] in ("gb", "dy"):
+            set_state(ctx, "nxsvadd", sid, p[1])
+            return await show(update, f"چند {'گیگ' if p[1] == 'gb' else 'روز'} اضافه شود؟ عددش را بفرست:", [row(btn("بازگشت به سرویس", f"nsv:v:{sid}", RED, "back"))])
+
+
+async def nx_message(update, ctx, uid, st):
+    m = update.effective_message; name = st[0]; txt = (m.text or "").strip()
+    if name == "nxcrypto":
+        if not m.photo: return await m.reply_text("لطفاً اسکرین‌شات تراکنش را بفرست (TXID در کپشن).")
+        amount, gift = st[1], st[2]
+        bonus = amount * int(S("gift_percent")) // 100 if gift and amount >= int(S("gift_min")) else 0
+        pid = ex("INSERT INTO payments(user_id,amount,bonus,photo,created) VALUES(?,?,?,?,?)", (uid, amount, bonus, m.photo[-1].file_id, int(time.time())))
+        clear_state(ctx); u = get_user(uid)
+        cap = (f"💎 رسید ارز دیجیتال #{pid}\nکاربر: <code>{uid}</code> ({html.escape(u['name'] or '')})\n"
+               f"مبلغ: {money(amount)}{f' + هدیه {money(bonus)}' if bonus else ''} تومان\nTXID: <code>{html.escape((m.caption or '-')[:200])}</code>")
+        kb = IKM([row(btn("تأیید", f"pa:{pid}", GREEN, "ok"), btn("رد", f"pr:{pid}", RED, "no"))])
+        for a in ADMIN_IDS:
+            try: await ctx.bot.send_photo(a, m.photo[-1].file_id, caption=cap, parse_mode=ParseMode.HTML, reply_markup=kb)
+            except Exception: pass
+        return await m.reply_text(render("receipt_wait"), parse_mode=ParseMode.HTML, reply_markup=IKM(back_home()))
+    if not is_admin(uid): clear_state(ctx); return
+    if name == "nxprof":
+        t = nx_digits(txt).lstrip("@")
+        u = get_user(int(t)) if t.isdigit() else q("SELECT * FROM users WHERE LOWER(username)=LOWER(?)", (t,), True)
+        if not u: return await m.reply_text("کاربر پیدا نشد. آیدی عددی یا یوزرنیم درست بفرست.")
+        clear_state(ctx); return await nx_profile(update, u["id"])
+    if name == "nxbal":
+        t = nx_digits(txt)
+        if not t.isdigit() or int(t) <= 0: return await m.reply_text("فقط عدد مثبت بفرست.")
+        act, tid, amt = st[1], st[2], int(t)
+        ex("UPDATE users SET balance=balance" + ("+" if act == "add" else "-") + "? WHERE id=?", (amt, tid))
+        added_audit(uid, "balance_" + act, tid, amt); clear_state(ctx)
+        try: await ctx.bot.send_message(tid, f"{'➕' if act == 'add' else '➖'} {money(amt)} تومان {'به' if act == 'add' else 'از'} کیف پول شما {'اضافه' if act == 'add' else 'کسر'} شد.")
+        except Exception: pass
+        await m.reply_text(f"✅ انجام شد. موجودی جدید: {money(get_user(tid)['balance'])}")
+        return await nx_profile(update, tid)
+    if name == "nxmsg":
+        tid = st[1]; clear_state(ctx)
+        try:
+            await ctx.bot.send_message(tid, "📩 <b>پیام از پشتیبانی:</b>", parse_mode=ParseMode.HTML); await m.copy(tid)
+            added_audit(uid, "user_message", tid); res = "✅ پیام ارسال شد."
+        except Exception as e: res = f"❌ ارسال نشد: {e}"
+        return await m.reply_text(res, reply_markup=IKM([row(btn("بازگشت به پروفایل", f"nup:v:{tid}", BLUE, "back"))]))
+    if name == "nxsvadd":
+        t = nx_digits(txt)
+        try: val = float(t)
+        except Exception: val = 0
+        if val <= 0: return await m.reply_text("فقط عدد مثبت بفرست.")
+        if val.is_integer(): val = int(val)
+        clear_state(ctx); return await nx_service_add(update, ctx, uid, st[1], st[2], val)
+    if name == "ngpadd":
+        parts = txt.split()
+        if len(parts) < 2 or not nx_digits(parts[-1]).isdigit(): return await m.reply_text("فرمت: نام درصد\nمثال: <code>VIP 10</code>", parse_mode=ParseMode.HTML)
+        g = " ".join(parts[:-1]).replace("|", "").replace(":", "")[:20]; pct = max(0, min(100, int(nx_digits(parts[-1]))))
+        if g == "عادی" or g in nx_groups(): set_S("grp_pct:" + g, pct)
+        else: set_S("groups", "|".join(nx_groups() + [g])); set_S("grp_pct:" + g, pct)
+        added_audit(uid, "group_save", g, pct); clear_state(ctx); return await nx_groups_page(update)
+    if name == "ngpset":
+        t = nx_digits(txt).replace("%", "")
+        if not t.isdigit() or int(t) > 100: return await m.reply_text("فقط عدد ۰ تا ۱۰۰ بفرست.")
+        g = _nx_group_by_idx(st[1])
+        if g: set_S("grp_pct:" + g, int(t)); added_audit(uid, "group_pct", g, t)
+        clear_state(ctx); return await nx_groups_page(update)
+    if name == "nxbc":
+        clear_state(ctx); return await nx_broadcast(update, ctx, uid, st[1], st[2])
+
+
+# ---------- پوشاندن هندلرهای اصلی (در آخر همان تابع قبلی اجرا می‌شود) ----------
+_nx_orig_on_callback = on_callback
+async def on_callback(update, ctx):
+    cq = update.callback_query; uid = cq.from_user.id; d = cq.data or ""
+    u = touch(cq.from_user)
+    if u["banned"]: return await _nx_orig_on_callback(update, ctx)
+    if nx_maint_block(uid): return await cq.answer(_nx_plain(render("maintenance")), show_alert=True)
+    if d == "nfj:check":
+        _NX_FJ_CACHE.pop(uid, None)
+        if await nx_fj_ok(ctx.bot, uid):
+            await cq.answer("✅ عضویت تأیید شد"); clear_state(ctx); return await send_home(update, ctx, uid)
+        return await cq.answer("هنوز عضو کانال نشده‌ای.", show_alert=True)
+    if not await nx_fj_ok(ctx.bot, uid):
+        await cq.answer(); return await show(update, render("force_join"), nx_fj_kb())
+    pre = d.split(":")[0]
+    if pre in NX_PREFIXES_USER or pre in NX_PREFIXES_ADMIN:
+        if pre in NX_PREFIXES_ADMIN and not is_admin(uid): return await cq.answer()
+        if pre not in ("nzv", "nrc"): await cq.answer()
+        try: return await nx_callback(update, ctx, uid, d)
+        except Exception as e:
+            log.exception("nx callback %s", d)
+            try: await cq.answer("خطا: " + str(e)[:150], show_alert=True)
+            except Exception: pass
+            return
+    return await _nx_orig_on_callback(update, ctx)
+
+
+_nx_orig_on_message = on_message
+async def on_message(update, ctx):
+    m = update.effective_message
+    if not m or not update.effective_user: return await _nx_orig_on_message(update, ctx)
+    uid = update.effective_user.id
+    u = touch(update.effective_user)
+    if u["banned"]: return await _nx_orig_on_message(update, ctx)
+    if nx_maint_block(uid): return await m.reply_text(render("maintenance"), parse_mode=ParseMode.HTML)
+    st = ctx.user_data.get("state")
+    if st and st[0] in (NX_STATES_ADMIN | NX_STATES_USER):
+        return await nx_message(update, ctx, uid, st)
+    if st and st[0] in ("addticket", "addticketreply") and (m.photo or m.document):
+        return await nx_ticket_file(update, ctx, uid, st)
+    return await _nx_orig_on_message(update, ctx)
+
+
+_nx_orig_init_db_extra = init_db_extra
+def init_db_extra():
+    _nx_orig_init_db_extra()
+    nx_init_db()
+# ═══════════════════════════════ پایان افزودنی‌های نسخه جدید ═══════════════════════════════
+
+
 if __name__ == "__main__":
     main()
