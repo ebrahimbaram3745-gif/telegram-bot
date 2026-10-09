@@ -22,7 +22,7 @@ except ImportError:
 
 # ───────────────────────── تنظیمات اصلی ─────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "7363962357").replace(" ", "").split(",") if x}
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "123456789").replace(" ", "").split(",") if x}
 # ➕ ادمین اصلی (فقط او می‌تواند ادمین اضافه/حذف کند)
 MAIN_ADMIN_ID = 7363962357
 ENV_ADMIN_IDS = set(ADMIN_IDS)  # ادمین‌های داخل تنظیمات هم ادمین اصلی حساب می‌شوند
@@ -75,7 +75,7 @@ EMOJI = {
     "ip": "📍", "usage": "📊", "mysettings": "⚙️", "remind": "🔔", "transfer": "🔁", "ipbox": "🛡",  # ➕
 }
 # ➕ ایموجی دکمه‌های جدید (تمدید، حذف، تغییر نام، کد تخفیف، تراکنش‌ها)
-EMOJI.update({"renew": "🔄", "delsrv": "🗑", "rename": "📝", "discount": "🎟", "trx": "🧾", "ticket": "🎫", "reply": "↩️", "direct": "👤"})
+EMOJI.update({"renew": "🔄", "delsrv": "🗑", "rename": "📝", "discount": "🎟", "trx": "🧾"})
 
 # ───────────────────────── متن‌های قابل ویرایش ─────────────────────────
 # متغیرها: {BOT} {USER} {ID} {BALANCE} {PRICE} {GB} {DAYS} {LINK} {SERVICES} {DATE} ...
@@ -1641,7 +1641,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         except Exception: pass
         return await show(update, f"✅ سرویس <code>{html.escape(s['username'])}</code> به کاربر <code>{b}</code> منتقل شد.", back_more())
     if d == "test": return await do_test(update, ctx, uid)
-    if d == "supportmenu": return await support_menu(update, ctx)
+    if d == "supportmenu": return await support_menu_extra(update, ctx)
     if d == "more": return await page_more(update, uid)
     if d in ("help", "rules"): return await show(update, render(d), [row(btn("بازگشت", "more", RED, "back"))])
     if d == "ref":
@@ -2111,105 +2111,86 @@ async def job_followup(ctx: ContextTypes.DEFAULT_TYPE):
             log.warning("followup %s: %s", s["id"], e)
 
 
-# ───────────────────────── پشتیبانی تکمیلی ─────────────────────────
-# افزوده شده بدون حذف یا تغییر قابلیت‌های قبلی
-import shutil
-
-def init_added_support():
+# ───────────────────────── تیکت پشتیبانی افزوده ─────────────────────────
+def init_support_extra():
     CON.executescript("""
     CREATE TABLE IF NOT EXISTS support_tickets(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,status TEXT DEFAULT 'open',created INTEGER,updated INTEGER);
     CREATE TABLE IF NOT EXISTS support_messages(id INTEGER PRIMARY KEY AUTOINCREMENT,ticket_id INTEGER NOT NULL,sender_id INTEGER NOT NULL,body TEXT,created INTEGER);
     """); CON.commit()
 
-def support_kb(tid, admin=False):
-    if admin: return IKM([[btn('بستن تیکت',f'addtkclose:{tid}',RED,'delsrv'),btn('پاسخ',f'addtkr:{tid}',GREEN,'reply')]])
-    return IKM([[btn('ارسال پیام',f'addtkmsg:{tid}',BLUE,'ticket')],[btn('بستن تیکت',f'addtkclose:{tid}',RED,'delsrv')]])
+def support_buttons(tid, admin=False):
+    if admin:
+        return IKM([[btn('بستن تیکت',f'xtclose:{tid}',RED,'delsrv'),btn('پاسخ',f'xtreply:{tid}',GREEN,'reply')]])
+    return IKM([[btn('ارسال پیام',f'xtmsg:{tid}',BLUE,'ticket')],[btn('بستن تیکت',f'xtclose:{tid}',RED,'delsrv')]])
 
-async def support_menu(update,ctx):
-    await show(update,f"{E('support')} <b>پشتیبانی</b>\n\nگزینه موردنظر را انتخاب کن:",[row(btn('باز کردن تیکت','addtkopen',BLUE,'ticket')),
-        row(btn('ارتباط مستقیم',url=S('support_url'),ek='direct'))]+back_home())
+async def support_menu_extra(update, ctx):
+    await show(update, f'{E("support")} <b>پشتیبانی</b>\n\nگزینه موردنظر را انتخاب کن:',
+               [row(btn('باز کردن تیکت','xtopen',BLUE,'ticket')), row(btn('ارتباط مستقیم',url=S('support_url'),ek='direct'))] + back_home())
 
-async def support_open(update,ctx):
-    uid=update.effective_user.id; now=int(time.time()); t=q("SELECT * FROM support_tickets WHERE user_id=? AND status='open' ORDER BY id DESC LIMIT 1",(uid,),True)
-    tid=t['id'] if t else ex('INSERT INTO support_tickets(user_id,status,created,updated) VALUES(?,?,?,?,?)'.replace('?,?,?,?','?,?,?,?'),(uid,'open',now,now))
-    set_state(ctx,'addticket',tid)
-    return await show(update,f'🎫 تیکت #{tid} آماده است. پیام خودت را بفرست.',[row(btn('لغو','home',RED,'no'))])
+async def support_open_extra(update, ctx):
+    uid=update.effective_user.id; now=int(time.time())
+    t=q("SELECT * FROM support_tickets WHERE user_id=? AND status='open' ORDER BY id DESC LIMIT 1",(uid,),True)
+    if t: tid=t['id']
+    else: tid=ex('INSERT INTO support_tickets(user_id,status,created,updated) VALUES(?,?,?,?)',(uid,'open',now,now))
+    set_state(ctx,'xticket',tid)
+    await show(update,f'🎫 تیکت #{tid} آماده است. پیام خودت را بفرست.',[row(btn('لغو','home',RED,'no'))])
 
-def support_render(tid):
+def support_user_info(tid):
     t=q('SELECT * FROM support_tickets WHERE id=?',(tid,),True)
     if not t:return None
-    u=get_user(t['user_id']); msgs=q('SELECT * FROM support_messages WHERE ticket_id=? ORDER BY id',(tid,))
-    name=html.escape((u['name'] if u else '') or 'بدون نام'); username=html.escape((u['username'] if u else '') or 'ندارد'); phone=html.escape((u['phone'] if u else '') or 'ثبت نشده')
-    out=f'🎫 <b>تیکت #{tid}</b>\n👤 نام: <b>{name}</b>\n🔹 یوزرنیم: @{username}\n🆔 آیدی: <code>{t["user_id"]}</code>\n📱 شماره: {phone}\n\n'
-    for m in msgs: out += f"<b>{'کاربر' if m['sender_id']==t['user_id'] else 'پشتیبانی'}:</b> {html.escape(m['body'])}\n"
-    return out
+    u=get_user(t['user_id']); name=html.escape((u['name'] if u else '') or 'بدون نام'); username=html.escape((u['username'] if u else '') or 'ندارد'); phone=html.escape((u['phone'] if u else '') or 'ثبت نشده')
+    return t,f'👤 نام: <b>{name}</b>\n🔹 یوزرنیم: @{username}\n🆔 آیدی: <code>{t["user_id"]}</code>\n📱 شماره: {phone}'
 
-async def support_admin_list(update,ctx):
-    if not is_admin(update.effective_user.id):return
-    rows=q("SELECT * FROM support_tickets WHERE status='open' ORDER BY updated DESC LIMIT 30")
-    kb=[[btn(f"#{r['id']} | کاربر {r['user_id']}",f'addtk:{r["id"]}',None,'ticket')] for r in rows]
-    await update.message.reply_text('🎫 تیکت‌های باز:' if rows else 'تیکت باز نداریم.',reply_markup=IKM(kb) if kb else None)
-
-async def support_callback(update,ctx):
+async def support_callback_extra(update,ctx):
     cq=update.callback_query; uid=cq.from_user.id; d=cq.data
-    if d=='addtkopen': await cq.answer(); return await support_open(update,ctx)
-    if d=='addtks':
-        if not is_admin(uid):return await cq.answer('دسترسی ندارید',show_alert=True)
-        rows=q("SELECT * FROM support_tickets WHERE status='open' ORDER BY updated DESC LIMIT 30"); kb=[[btn(f"#{r['id']} | کاربر {r['user_id']}",f'addtk:{r["id"]}',None,'ticket')] for r in rows]; await cq.answer(); return await cq.edit_message_text('🎫 تیکت‌های باز:' if rows else 'تیکت باز نداریم.',reply_markup=IKM(kb) if kb else None)
-    if d.startswith('addtk:'):
-        if not is_admin(uid):return await cq.answer('دسترسی ندارید',show_alert=True)
-        tid=int(d[6:]); await cq.answer(); return await cq.edit_message_text(support_render(tid) or 'تیکت پیدا نشد.',parse_mode=ParseMode.HTML,reply_markup=support_kb(tid,True))
-    if d.startswith('addtkmsg:'):
-        tid=int(d[8:]); t=q("SELECT * FROM support_tickets WHERE id=? AND user_id=? AND status='open'",(tid,uid),True)
-        if not t:return await cq.answer('تیکت پیدا نشد',show_alert=True)
-        set_state(ctx,'addticket',tid); await cq.answer(); return await cq.edit_message_text('پیام جدیدت را بفرست.')
-    if d.startswith('addtkr:'):
-        if not is_admin(uid):return await cq.answer('دسترسی ندارید',show_alert=True)
-        tid=int(d[7:]); t=q("SELECT * FROM support_tickets WHERE id=? AND status='open'",(tid,),True)
+    if d=='xtopen': await cq.answer(); return await support_open_extra(update,ctx)
+    if d.startswith('xtmsg:'):
+        tid=int(d[6:]); t=q("SELECT * FROM support_tickets WHERE id=? AND user_id=? AND status='open'",(tid,uid),True)
         if not t:return await cq.answer('تیکت بسته است',show_alert=True)
-        set_state(ctx,'addadminreply',tid); await cq.answer(); return await cq.edit_message_text(f'✍️ پاسخ تیکت #{tid} را بنویسید:')
-    if d.startswith('addtkclose:'):
-        tid=int(d[11:]); t=q('SELECT * FROM support_tickets WHERE id=?',(tid,),True)
+        set_state(ctx,'xticket',tid); await cq.answer(); return await cq.edit_message_text('پیام جدیدت را بفرست.')
+    if d.startswith('xtreply:'):
+        if not is_admin(uid):return await cq.answer('دسترسی ندارید',show_alert=True)
+        tid=int(d[8:]); t=q("SELECT * FROM support_tickets WHERE id=? AND status='open'",(tid,),True)
+        if not t:return await cq.answer('تیکت بسته است',show_alert=True)
+        set_state(ctx,'xadminreply',tid); await cq.answer(); return await cq.edit_message_text('✍️ پاسخ تیکت را بنویسید:')
+    if d.startswith('xtclose:'):
+        tid=int(d[8:]); t=q('SELECT * FROM support_tickets WHERE id=?',(tid,),True)
         if not t or (t['user_id']!=uid and not is_admin(uid)):return await cq.answer('دسترسی ندارید',show_alert=True)
         ex("UPDATE support_tickets SET status='closed',updated=? WHERE id=?",(int(time.time()),tid)); clear_state(ctx); await cq.answer('تیکت بسته شد'); return await cq.edit_message_text(f'✅ تیکت #{tid} بسته شد. امکان پاسخ‌گویی بسته است.')
 
-async def support_message(update,ctx):
+async def support_message_extra(update,ctx):
     st=ctx.user_data.get('state') or []; m=update.message
-    if not st or not m or not m.text:return
-    kind=st[0]
-    if kind not in ('addticket','addadminreply'):return
-    uid=update.effective_user.id; tid=int(st[1]); t=q('SELECT * FROM support_tickets WHERE id=? AND status="open"',(tid,),True)
-    if not t or (kind=='addadminreply' and not is_admin(uid)) or (kind=='addticket' and t['user_id']!=uid):return
+    if not st or st[0] not in ('xticket','xadminreply') or not m or not m.text:return
+    uid=update.effective_user.id; kind=st[0]; tid=int(st[1]); t=q("SELECT * FROM support_tickets WHERE id=? AND status='open'",(tid,),True)
+    if not t or (kind=='xticket' and t['user_id']!=uid) or (kind=='xadminreply' and not is_admin(uid)):return
     body=m.text.strip();
     if not body:return
     ex('INSERT INTO support_messages(ticket_id,sender_id,body,created) VALUES(?,?,?,?)',(tid,uid,body,int(time.time())))
     ex('UPDATE support_tickets SET updated=? WHERE id=?',(int(time.time()),tid))
-    if kind=='addticket':
-        u=get_user(uid); name=html.escape((u['name'] if u else '') or 'بدون نام'); username=html.escape((u['username'] if u else '') or 'ندارد'); phone=html.escape((u['phone'] if u else '') or 'ثبت نشده')
-        text=f'🎫 <b>تیکت جدید #{tid}</b>\n👤 نام: <b>{name}</b>\n🔹 یوزرنیم: @{username}\n🆔 آیدی: <code>{uid}</code>\n📱 شماره: {phone}\n\n💬 <b>پیام کاربر:</b>\n{html.escape(body)}'
+    if kind=='xticket':
+        info=support_user_info(tid)[1]; text=f'🎫 <b>تیکت جدید #{tid}</b>\n{info}\n\n💬 <b>پیام کاربر:</b>\n{html.escape(body)}'
         for a in ADMIN_IDS:
-            try: await ctx.bot.send_message(a,text,parse_mode=ParseMode.HTML,reply_markup=support_kb(tid,True))
+            try: await ctx.bot.send_message(a,text,parse_mode=ParseMode.HTML,reply_markup=support_buttons(tid,True))
             except Exception: pass
-        await m.reply_text('✅ پیام برای پشتیبانی ارسال شد.'); clear_state(ctx)
+        await m.reply_text('✅ پیام برای پشتیبانی ارسال شد.')
     else:
         try: await ctx.bot.send_message(t['user_id'],f'📩 پاسخ پشتیبانی برای تیکت #{tid}:\n{html.escape(body)}',parse_mode=ParseMode.HTML)
         except Exception: pass
-        await m.reply_text('✅ پاسخ برای کاربر ارسال شد.'); clear_state(ctx)
+        await m.reply_text('✅ پاسخ برای کاربر ارسال شد.')
+    clear_state(ctx)
 
 def main():
     init_db()
     init_db_extra()  # ➕ جدول‌های کد تخفیف / تراکنش / نام سرویس
-    init_added_support()
+    init_support_extra()
     load_admins()  # ➕
     app = Application.builder().token(BOT_TOKEN).build()
     app.post_init = ip_server_start  # ➕ وب‌سرور اطلاعات IP
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("emoji", cmd_emoji))
-    app.add_handler(CommandHandler("ticket", support_open))
-    app.add_handler(CommandHandler("tickets", support_admin_list))
-    app.add_handler(CallbackQueryHandler(support_callback, pattern=r"^addtk"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, support_message), group=-1)
+    app.add_handler(CallbackQueryHandler(support_callback_extra, pattern=r"^xt"))
     app.add_handler(CallbackQueryHandler(on_callback))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, support_message_extra), group=-1)
     app.add_handler(MessageHandler(~filters.COMMAND, on_message))
     app.job_queue.run_repeating(job_followup, interval=300, first=30)
     log.info("bot started")
