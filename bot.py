@@ -3216,5 +3216,149 @@ def init_db_extra():
 # ═══════════════════════════════ پایان افزودنی‌های نسخه جدید ═══════════════════════════════
 
 
+# Card-to-card purchase extension: additive only.
+_cardpay_orig_init_db_extra = init_db_extra
+def init_db_extra():
+    _cardpay_orig_init_db_extra()
+    CON.executescript("""
+    CREATE TABLE IF NOT EXISTS card_orders(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+        plan_id INTEGER NOT NULL, panel_id INTEGER NOT NULL, amount INTEGER NOT NULL,
+        bonus INTEGER DEFAULT 0, status TEXT DEFAULT 'pending', payment_id INTEGER,
+        created INTEGER, updated INTEGER
+    );
+    """)
+    cols = [r["name"] for r in q("PRAGMA table_info(payments)")]
+    if "order_id" not in cols:
+        ex("ALTER TABLE payments ADD COLUMN order_id INTEGER")
+    CON.commit()
+
+async def _cardpay_invoice(update, uid, plan_id, panel_id):
+    p = q("SELECT * FROM plans WHERE id=? AND active=1", (plan_id,), True)
+    pn = q("SELECT * FROM panels WHERE id=? AND active=1", (panel_id,), True)
+    if not p or not pn:
+        return await show(update, "این پلن/لوکیشن در دسترس نیست.", back_home())
+    price, dcline, _ = dc_price(uid, p["price"])
+    text = render("invoice", GB=p["gb"], DAYS=p["days"], PRICE=money(price),
+                  BALANCE=money(get_user(uid)["balance"]), LOCATION=html.escape(pn["name"])) + dcline
+    kb = [row(btn("پرداخت از کیف پول", f"pay:{plan_id}:{panel_id}", GREEN, "ok")),
+          row(btn("پرداخت کارت‌به‌کارت", f"ccp:{plan_id}:{panel_id}", BLUE, "card")),
+          row(btn("افزایش موجودی", "topup", None, "wallet")),
+          row(btn("استفاده از کد تخفیف", f"dc:b:{plan_id}:{panel_id}", BLUE, "discount")),
+          row(btn("بازگشت", "buy", RED, "back"))]
+    return await show(update, text, kb)
+
+async def _cardpay_start(update, ctx, uid, plan_id, panel_id):
+    p = q("SELECT * FROM plans WHERE id=? AND active=1", (plan_id,), True)
+    pn = q("SELECT * FROM panels WHERE id=? AND active=1", (panel_id,), True)
+    if not p or not pn:
+        return await show(update, "این پلن/لوکیشن در دسترس نیست.", back_home())
+    price, _, _ = dc_price(uid, p["price"])
+    now = int(time.time())
+    oid = ex("INSERT INTO card_orders(user_id,plan_id,panel_id,amount,created,updated) VALUES(?,?,?,?,?,?)",
+             (uid, plan_id, panel_id, price, now, now))
+    DC_PENDING.pop(uid, None)
+    text = (f"💳 <b>پرداخت کارت‌به‌کارت</b>\n\n"
+            f"لطفاً مبلغ <b>{money(price)} تومان</b> را به شماره کارت زیر واریز کنید:\n\n"
+            f"<code>{html.escape(S('card_number'))}</code>\n"
+            f"👤 صاحب کارت: <b>{html.escape(S('card_owner'))}</b>\n\n"
+            "⏳ این تراکنش تا ۳۰ دقیقه معتبر است.\n"
+            "بعد از واریز، روی «پرداخت کردم» بزنید و عکس رسید را ارسال کنید.")
+    kb = [row(btn("📋 کپی شماره کارت", f"ccopy:{oid}", BLUE, "card")),
+          row(btn("✅ پرداخت کردم، ارسال رسید", f"ccpaid:{oid}", GREEN, "ok")),
+          row(btn("بازگشت به روش‌ها", f"inv:{plan_id}:{panel_id}", RED, "back"))]
+    return await show(update, text, kb)
+
+async def _cardpay_receipt_prompt(update, ctx, uid, oid):
+    order = q("SELECT * FROM card_orders WHERE id=? AND user_id=? AND status='pending'", (oid, uid), True)
+    if not order:
+        return await update.callback_query.message.reply_text("این سفارش دیگر در انتظار پرداخت نیست.")
+    set_state(ctx, "cardreceipt", oid)
+    return await show(update, "📸 <b>لطفاً عکس رسید واریزی را ارسال کنید.</b>\n✅ رسید معمولاً طی ۵ تا ۱۵ دقیقه بررسی می‌شود.",
+                      [row(btn("انصراف", f"inv:{order['plan_id']}:{order['panel_id']}", RED, "no"))])
+
+_cardpay_orig_on_callback = on_callback
+async def on_callback(update, ctx):
+    d = update.callback_query.data or ""
+    uid = update.effective_user.id
+    if d.startswith(("pa:", "pr:")):
+        pid = int(d[3:])
+        pay = q("SELECT * FROM payments WHERE id=? AND status='pending'", (pid,), True)
+        if pay and pay["order_id"]:
+            order = q("SELECT * FROM card_orders WHERE id=? AND status='pending'", (pay["order_id"],), True)
+            if not order:
+                return await update.callback_query.answer("این سفارش قبلاً بررسی شده.", show_alert=True)
+            if d.startswith("pr:"):
+                ex("UPDATE payments SET status='rejected' WHERE id=?", (pid,))
+                ex("UPDATE card_orders SET status='rejected',updated=? WHERE id=?", (int(time.time()), order["id"]))
+                try: await ctx.bot.send_message(order["user_id"], "❌ رسید خرید رد شد. با پشتیبانی در ارتباط باشید.")
+                except Exception: pass
+                return await update.callback_query.edit_message_caption(f"❌ رد شد #{pid}")
+            p = q("SELECT * FROM plans WHERE id=?", (order["plan_id"],), True)
+            pn = q("SELECT * FROM panels WHERE id=? AND active=1", (order["panel_id"],), True)
+            if not p or not pn:
+                return await update.callback_query.answer("پلن یا پنل دیگر در دسترس نیست.", show_alert=True)
+            try:
+                sid, manual = await build_service(ctx, order["user_id"], pn, p["gb"], p["days"],
+                                                  order["amount"], p["id"])
+                ex("UPDATE payments SET status='ok' WHERE id=?", (pid,))
+                ex("UPDATE card_orders SET status='ok',updated=? WHERE id=?", (int(time.time()), order["id"]))
+                trx_log(order["user_id"], "card_buy", sid, p["id"], pn["id"], p["gb"], p["days"], order["amount"])
+                if not manual:
+                    await deliver(ctx, order["user_id"], sid)
+                else:
+                    await ctx.bot.send_message(order["user_id"], "✅ پرداخت تأیید شد. کانفیگ شما به‌زودی ارسال می‌شود.")
+                return await update.callback_query.edit_message_caption(f"✅ تأیید و سرویس ساخته شد #{pid}")
+            except Exception as e:
+                log.exception("card purchase approval failed")
+                return await update.callback_query.answer("ساخت سرویس ناموفق بود؛ رسید هنوز تأیید نشده.", show_alert=True)
+    if d.startswith("ccp:"):
+        _, a, b = d.split(":")
+        return await _cardpay_start(update, ctx, uid, int(a), int(b))
+    if d.startswith("ccpaid:"):
+        return await _cardpay_receipt_prompt(update, ctx, uid, int(d.split(":")[1]))
+    if d.startswith("ccopy:"):
+        o = q("SELECT 1 FROM card_orders WHERE id=? AND user_id=? AND status='pending'",
+               (int(d.split(":")[1]), uid), True)
+        if o:
+            return await update.callback_query.message.reply_text(
+                f"<code>{html.escape(S('card_number'))}</code>", parse_mode=ParseMode.HTML)
+    return await _cardpay_orig_on_callback(update, ctx)
+
+_cardpay_orig_on_message = on_message
+async def on_message(update, ctx):
+    st = ctx.user_data.get("state") or []
+    if st and st[0] == "cardreceipt":
+        uid = update.effective_user.id
+        m = update.effective_message
+        if not m.photo:
+            return await m.reply_text("📸 لطفاً فقط عکس رسید واریزی را ارسال کنید.")
+        oid = int(st[1])
+        order = q("SELECT * FROM card_orders WHERE id=? AND user_id=? AND status='pending'", (oid, uid), True)
+        if not order:
+            clear_state(ctx)
+            return await m.reply_text("این سفارش دیگر معتبر نیست.")
+        pid = ex("INSERT INTO payments(user_id,amount,bonus,photo,created,order_id) VALUES(?,?,?,?,?,?)",
+                 (uid, order["amount"], order["bonus"], m.photo[-1].file_id, int(time.time()), oid))
+        ex("UPDATE card_orders SET payment_id=?,updated=? WHERE id=?", (pid, int(time.time()), oid))
+        clear_state(ctx)
+        u = get_user(uid)
+        cap = (f"🧾 <b>رسید خرید مستقیم #{pid}</b>\nکاربر: <code>{uid}</code> ({html.escape(u['name'] or '')})\n"
+               f"مبلغ: <b>{money(order['amount'])} تومان</b>\nپلن: <code>#{order['plan_id']}</code> | پنل: <code>#{order['panel_id']}</code>")
+        kb = IKM([row(btn("تأیید", f"pa:{pid}", GREEN, "ok"), btn("رد", f"pr:{pid}", RED, "no"))])
+        for a in ADMIN_IDS:
+            try:
+                await ctx.bot.send_photo(a, m.photo[-1].file_id, caption=cap,
+                                         parse_mode=ParseMode.HTML, reply_markup=kb)
+            except Exception:
+                pass
+        return await m.reply_text("✅ رسید شما ثبت شد.\n⏱ تأیید رسید معمولاً طی ۵ تا ۱۵ دقیقه بررسی می‌شود.",
+                                  reply_markup=IKM(back_home()))
+    return await _cardpay_orig_on_message(update, ctx)
+
+_cardpay_orig_page_invoice = page_invoice
+async def page_invoice(update, uid, plan_id, panel_id):
+    return await _cardpay_invoice(update, uid, plan_id, panel_id)
+
 if __name__ == "__main__":
     main()
