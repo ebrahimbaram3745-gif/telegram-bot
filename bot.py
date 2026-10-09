@@ -22,7 +22,7 @@ except ImportError:
 
 # ───────────────────────── تنظیمات اصلی ─────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "123456789").replace(" ", "").split(",") if x}
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "7363962357").replace(" ", "").split(",") if x}
 # ➕ ادمین اصلی (فقط او می‌تواند ادمین اضافه/حذف کند)
 MAIN_ADMIN_ID = 7363962357
 ENV_ADMIN_IDS = set(ADMIN_IDS)  # ادمین‌های داخل تنظیمات هم ادمین اصلی حساب می‌شوند
