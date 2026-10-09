@@ -3389,5 +3389,93 @@ _cardpay_orig_page_invoice = page_invoice
 async def page_invoice(update, uid, plan_id, panel_id):
     return await _cardpay_invoice(update, uid, plan_id, panel_id)
 
+# Subscription-link rotation extension. Existing service actions remain unchanged.
+BTN_GROUPS.update({"sublink": "دکمه تغییر لینک ساب"})
+EMOJI.update({"sublink": "🔗"})
+if "دکمه تغییر لینک ساب" not in BTN_NAMES:
+    BTN_NAMES.append("دکمه تغییر لینک ساب")
+
+async def _rotate_subscription_link(update, ctx, uid, sid):
+    s = q("SELECT * FROM services WHERE id=? AND user_id=? AND status!='deleted'", (sid, uid), True)
+    if not s:
+        return await show(update, "سرویس پیدا نشد.", back_home())
+    p = q("SELECT * FROM panels WHERE id=?", (s["panel_id"],), True)
+    if not p or p["ptype"] == "manual":
+        return await show(update, "برای این نوع سرویس تغییر خودکار لینک ساب از پنل پشتیبانی نمی‌شود.",
+                          [row(btn("بازگشت به سرویس", f"sv:{sid}", RED, "back"))])
+    try:
+        async with _http(p) as c:
+            if p["ptype"] in XUI_PREFIX:
+                await _xlogin(c, p)
+                inb, inbound, client = await _xui_find(c, p["ptype"], p, s["username"])
+                if not client:
+                    raise Exception("کلاینت روی پنل پیدا نشد")
+                new_sid = secrets.token_hex(8)
+                client["subId"] = new_sid
+                r = await c.post(f"{XUI_PREFIX[p['ptype']].rstrip('/')}/updateClient/{_xui_cid(inbound, client)}",
+                                 data={"id": inb, "settings": json.dumps({"clients": [client]})})
+                j = r.json()
+                if not j.get("success"):
+                    raise Exception(j.get("msg") or "updateClient failed")
+                parts = (p["extra"] or "").split("|")
+                if len(parts) > 1 and parts[1].strip():
+                    new_sub = parts[1].strip().rstrip("/") + "/" + new_sid
+                else:
+                    new_sub = await _xui_sub(c, p["ptype"], p, new_sid)
+                if not new_sub:
+                    raise Exception("لینک ساب در تنظیمات پنل فعال نیست")
+            else:
+                return await show(update,
+                    "این پنل لینک ساب را با شناسه داخلی خودش می‌سازد و تغییر امن آن از API ممکن نیست؛ "
+                    "برای حفظ سرویس، چیزی حذف یا بازسازی نشد.",
+                    [row(btn("بازگشت به سرویس", f"sv:{sid}", RED, "back"))])
+        links = await _sub_links(new_sub) if new_sub.startswith("http") else []
+        ex("UPDATE services SET sub=?, link=? WHERE id=?", (new_sub, links[0] if links else new_sub, sid))
+        text = (f"✅ <b>لینک ساب تغییر کرد.</b>\n\n"
+                f"لینک قبلی دیگر روی پنل معتبر نیست.\n"
+                f"🔗 لینک جدید:\n<code>{html.escape(new_sub)}</code>")
+        return await show(update, text, [row(btn("بازگشت به سرویس", f"sv:{sid}", BLUE, "back"))] + back_home())
+    except Exception as e:
+        log.exception("rotate subscription link")
+        return await show(update, f"❌ تغییر لینک ساب انجام نشد:\n<code>{html.escape(str(e))[:400]}</code>",
+                          [row(btn("تلاش دوباره", f"sublink:{sid}", BLUE, "sublink")),
+                           row(btn("بازگشت به سرویس", f"sv:{sid}", RED, "back"))])
+
+_sublink_orig_page_service = page_service
+async def page_service(update, uid, sid):
+    s = q("SELECT * FROM services WHERE id=? AND user_id=? AND status!='deleted'", (sid, uid), True)
+    if not s:
+        return await _sublink_orig_page_service(update, uid, sid)
+    # Insert the new control before the existing service controls, preserving their order.
+    p = q("SELECT * FROM panels WHERE id=?", (s["panel_id"],), True)
+    extra = ""
+    if p and p["ptype"] != "manual" and s["status"] == "active":
+        try:
+            i = await panel_info(p, s["username"])
+            if i:
+                extra = (f"\nوضعیت: <b>{i['status']}</b>\nمصرف: <b>{i['used']:.2f}</b> از "
+                         f"<b>{i['total']:.0f}</b> گیگ\nانقضا: {i['expire']}")
+        except Exception:
+            extra = "\n(دریافت وضعیت از پنل ممکن نشد)"
+    link = s["sub"] or s["link"] or "هنوز ارسال نشده"
+    text = (f"{E('plan')} <b>{svc_name(s)}</b>\n<blockquote>📍 لوکیشن: {html.escape(p['name'] if p else '-')}\n"
+            f"{E('volume')} حجم: {s['gb']} گیگ\n{E('time')} انقضا: {jdate(s['expire'])}{extra}</blockquote>\n\n"
+            f"{E('link')} لینک:\n<code>{html.escape(link)}</code>")
+    kb = [row(btn("تغییر لینک ساب", f"sublink:{sid}", BLUE, "sublink"))]
+    kb += [row(btn("دریافت QR", f"qr:{sid}", BLUE, "qr"), btn("بروزرسانی وضعیت", f"sv:{sid}", None, "search")),
+           row(btn("QR کانفیگ", f"qrc:{sid}", BLUE, "qr")) if s["link"] and s["sub"] and s["link"] != s["sub"] else [],
+           row(btn("تمدید پلن", f"rn:{sid}", GREEN, "renew")) if s["status"] != "pending" else [],
+           row(btn("تغییر نام سرویس", f"sren:{sid}", BLUE, "rename"), btn("حذف سرویس", f"sdel:{sid}", RED, "delsrv")),
+           row(btn("بازگشت", "subs", RED, "back"))]
+    return await show(update, text, [r for r in kb if r])
+
+_sublink_orig_on_callback = on_callback
+async def on_callback(update, ctx):
+    d = update.callback_query.data or ""
+    if d.startswith("sublink:"):
+        uid = update.effective_user.id
+        return await _rotate_subscription_link(update, ctx, uid, int(d.split(":")[1]))
+    return await _sublink_orig_on_callback(update, ctx)
+
 if __name__ == "__main__":
     main()
