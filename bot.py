@@ -75,7 +75,7 @@ EMOJI = {
     "ip": "📍", "usage": "📊", "mysettings": "⚙️", "remind": "🔔", "transfer": "🔁", "ipbox": "🛡",  # ➕
 }
 # ➕ ایموجی دکمه‌های جدید (تمدید، حذف، تغییر نام، کد تخفیف، تراکنش‌ها)
-EMOJI.update({"renew": "🔄", "delsrv": "🗑", "rename": "📝", "discount": "🎟", "trx": "🧾"})
+EMOJI.update({"renew": "🔄", "delsrv": "🗑", "rename": "📝", "discount": "🎟", "trx": "🧾", "ticket": "🎫", "reply": "↩️", "direct": "👤"})
 
 # ───────────────────────── متن‌های قابل ویرایش ─────────────────────────
 # متغیرها: {BOT} {USER} {ID} {BALANCE} {PRICE} {GB} {DAYS} {LINK} {SERVICES} {DATE} ...
