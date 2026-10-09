@@ -22,7 +22,7 @@ except ImportError:
 
 # ───────────────────────── تنظیمات اصلی ─────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "7363962357").replace(" ", "").split(",") if x}
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "123456789").replace(" ", "").split(",") if x}
 # ➕ ادمین اصلی (فقط او می‌تواند ادمین اضافه/حذف کند)
 MAIN_ADMIN_ID = 7363962357
 ENV_ADMIN_IDS = set(ADMIN_IDS)  # ادمین‌های داخل تنظیمات هم ادمین اصلی حساب می‌شوند
@@ -3233,6 +3233,38 @@ def init_db_extra():
         ex("ALTER TABLE payments ADD COLUMN order_id INTEGER")
     CON.commit()
 
+# Appearance groups for the three card-payment controls.
+BTN_GROUPS.update({
+    "ccp": "دکمه پرداخت کارت‌به‌کارت",
+    "ccopy": "دکمه کپی شماره کارت",
+    "ccpaid": "دکمه ارسال رسید کارت‌به‌کارت",
+    "ccopyamt": "دکمه کپی مبلغ ریال",
+})
+EMOJI.update({
+    "copycard": "📋",
+    "copyamount": "💰",
+})
+for _n in BTN_GROUPS.values():
+    if _n not in BTN_NAMES:
+        BTN_NAMES.append(_n)
+
+def _copy_text_btn(text, value, ek=None):
+    """Native Telegram copy button. It copies locally and sends no message."""
+    eid = emoji_id(ek) if ek else None
+    kw = {}
+    if eid:
+        kw["icon_custom_emoji_id"] = eid
+    label = text if eid else f"{text} {EMOJI.get(ek, '')}".strip()
+    try:
+        return IKB(label, copy_text={"text": str(value)}, **kw)
+    except (TypeError, AttributeError):
+        try:
+            return IKB(label, api_kwargs={"copy_text": {"text": str(value)}, **kw})
+        except TypeError:
+            # Old Telegram libraries cannot expose native copy buttons.
+            # Keep a harmless callback fallback rather than breaking the flow.
+            return IKB(label, callback_data="copy_unavailable", **kw)
+
 async def _cardpay_invoice(update, uid, plan_id, panel_id):
     p = q("SELECT * FROM plans WHERE id=? AND active=1", (plan_id,), True)
     pn = q("SELECT * FROM panels WHERE id=? AND active=1", (panel_id,), True)
@@ -3264,8 +3296,9 @@ async def _cardpay_start(update, ctx, uid, plan_id, panel_id):
             f"👤 صاحب کارت: <b>{html.escape(S('card_owner'))}</b>\n\n"
             "⏳ این تراکنش تا ۳۰ دقیقه معتبر است.\n"
             "بعد از واریز، روی «پرداخت کردم» بزنید و عکس رسید را ارسال کنید.")
-    kb = [row(btn("📋 کپی شماره کارت", f"ccopy:{oid}", BLUE, "card")),
-          row(btn("✅ پرداخت کردم، ارسال رسید", f"ccpaid:{oid}", GREEN, "ok")),
+    kb = [row(_copy_text_btn("کپی شماره کارت", S("card_number"), "copycard")),
+          row(_copy_text_btn("کپی مبلغ (ریال)", price * 10, "copyamount")),
+          row(btn("پرداخت کردم، ارسال رسید", f"ccpaid:{oid}", GREEN, "ok")),
           row(btn("بازگشت به روش‌ها", f"inv:{plan_id}:{panel_id}", RED, "back"))]
     return await show(update, text, kb)
 
@@ -3282,6 +3315,8 @@ async def on_callback(update, ctx):
     d = update.callback_query.data or ""
     uid = update.effective_user.id
     if d.startswith(("pa:", "pr:")):
+        if not is_admin(uid):
+            return await update.callback_query.answer("دسترسی ندارید.", show_alert=True)
         pid = int(d[3:])
         pay = q("SELECT * FROM payments WHERE id=? AND status='pending'", (pid,), True)
         if pay and pay["order_id"]:
@@ -3317,12 +3352,6 @@ async def on_callback(update, ctx):
         return await _cardpay_start(update, ctx, uid, int(a), int(b))
     if d.startswith("ccpaid:"):
         return await _cardpay_receipt_prompt(update, ctx, uid, int(d.split(":")[1]))
-    if d.startswith("ccopy:"):
-        o = q("SELECT 1 FROM card_orders WHERE id=? AND user_id=? AND status='pending'",
-               (int(d.split(":")[1]), uid), True)
-        if o:
-            return await update.callback_query.message.reply_text(
-                f"<code>{html.escape(S('card_number'))}</code>", parse_mode=ParseMode.HTML)
     return await _cardpay_orig_on_callback(update, ctx)
 
 _cardpay_orig_on_message = on_message
